@@ -2,6 +2,7 @@ extern crate sdl2;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use std::ffi::{CString, CStr};
 
 pub mod mgl {
 
@@ -13,7 +14,7 @@ pub mod mgl {
             id: gl::types::GLuint,
         }
 
-        struct ShaderProgram {
+        pub struct ShaderProgram {
             id: gl::types::GLuint
         }
 
@@ -26,7 +27,7 @@ pub mod mgl {
 
         impl ShaderProgram {
 
-            pub fn start_using(&self) {
+            pub fn set_active(&self) {
                 unsafe { gl::UseProgram(self.id); }
             }
 
@@ -143,7 +144,7 @@ pub mod mgl {
     }
 }
 
-fn main() {
+fn main()  {
 
     let sdl = sdl2::init().unwrap();
     let sdl_video = sdl.video()
@@ -168,26 +169,93 @@ fn main() {
     let mut event_pump = sdl.event_pump()
                             .expect("Could not initialise SDL2 event pump!");
 
+    let vert_shader = mgl::core::Shader::from_source (
+        &CString::new(include_str!("../shaders/basic_vert.glsl")).unwrap(),
+        gl::VERTEX_SHADER
+    ).expect("Could not load vertex shader!`");
+
+    let frag_shader = mgl::core::Shader::from_source (
+        &CString::new(include_str!("../shaders/basic_frag.glsl")).unwrap(),
+        gl::FRAGMENT_SHADER
+    ).expect("Could not load fragment shader!");
+
+    let shader_program = mgl::core::ShaderProgram::from_shaders(&[vert_shader, frag_shader])
+        .expect("Could not link shader program!");
+
+    let vertices: Vec<f32> = vec![
+        -0.5, -0.5, 0.0,
+        0.5, -0.5, 0.0,
+        0.0, 0.5, 0.0
+    ];
+
+    use gl::types::*;
+
+    let mut vbo: GLuint = 0;
+    let mut vao: GLuint = 0;
+
     unsafe {
         gl::Viewport(0, 0, 800, 600);
+        gl::GenBuffers(1, &mut vbo);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+
+        gl::BufferData(
+            gl::ARRAY_BUFFER, // buffer type
+            (vertices.len() * std::mem::size_of::<f32>()) as GLsizeiptr, // amount of data being sent
+            vertices.as_ptr() as *const GLvoid, //  pointer to local buffer
+            gl::STATIC_DRAW // use for the buffer
+        );
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+
+        gl::GenVertexArrays(1, &mut vao);
+
+        gl::BindVertexArray(vao);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+
+        gl::EnableVertexAttribArray(0);
+        gl::VertexAttribPointer(
+            0, // location
+            3, // component count
+            gl::FLOAT, // type
+            gl::FALSE, // normalized
+            (3 * std::mem::size_of::<f32>() as GLint), // stride
+            std::ptr::null()
+        );
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BindVertexArray(0);
+    }
+
+    unsafe {
         gl::ClearColor(0.3, 0.0, 0.3, 1.0);
     }
 
     'main_loop: loop {
+
         for event in event_pump.poll_iter() {
 
             match event {
                 Event::Quit {..} => break 'main_loop,
                 Event::KeyDown { keycode: Some(Keycode::Escape), ..} => break 'main_loop,
-                _ => {},
-
+                _ => {}
             }
         }
+        // Enable shader
+        shader_program.set_active();
 
+        // Drawing code
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::BindVertexArray(vao);
+            gl::DrawArrays(
+                gl::TRIANGLES, // mode
+                0, // start index
+                3, // number of indices
+            );
         }
 
         window.gl_swap_window();
     }
+
 }
