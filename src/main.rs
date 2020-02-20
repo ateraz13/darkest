@@ -1,8 +1,19 @@
-extern crate sdl2;
-
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::ffi::{CString, CStr};
+use std::path::Path;
+use std::io;
+use gl::types::*;
+
+
+// TODO: Start preparing debug.rs
+// OpenGL debugging and error checking modes
+//
+// Unsafe code should be wrapped with macro
+// On failure OpenGL code could be tested in
+// debbug mode.
+
+pub mod resource;
 
 pub mod mgl {
 
@@ -144,7 +155,7 @@ pub mod mgl {
     }
 }
 
-fn main()  {
+fn main()  -> io::Result<()>{
 
     let sdl = sdl2::init().unwrap();
     let sdl_video = sdl.video()
@@ -157,7 +168,7 @@ fn main()  {
     let window = sdl_video
         .window("darkest v0.01a", 800, 600)
         .opengl()
-        .resizable()
+//        .resizable()
         .build()
         .expect("Could not create SDL2 window!");
 
@@ -169,13 +180,15 @@ fn main()  {
     let mut event_pump = sdl.event_pump()
                             .expect("Could not initialise SDL2 event pump!");
 
+    let buf_loader = resource::BufferLoader::relative_to_exe()?;
+
     let vert_shader = mgl::core::Shader::from_source (
-        &CString::new(include_str!("../shaders/basic_vert.glsl")).unwrap(),
+        &buf_loader.load_cstring(Path::new("shaders/basic_vert.glsl"))?,
         gl::VERTEX_SHADER
     ).expect("Could not load vertex shader!`");
 
     let frag_shader = mgl::core::Shader::from_source (
-        &CString::new(include_str!("../shaders/basic_frag.glsl")).unwrap(),
+        &buf_loader.load_cstring(Path::new("shaders/basic_frag.glsl"))?,
         gl::FRAGMENT_SHADER
     ).expect("Could not load fragment shader!");
 
@@ -183,21 +196,27 @@ fn main()  {
         .expect("Could not link shader program!");
 
     let vertices: Vec<f32> = vec![
+        -0.5, 0.5, 0.0,
         -0.5, -0.5, 0.0,
         0.5, -0.5, 0.0,
-        0.0, 0.5, 0.0
+        0.5, 0.5, 0.0,
     ];
 
-    use gl::types::*;
+    let indices: Vec<GLushort> = vec![
+         0, 1, 3, 2, 3, 0
+    ];
 
-    let mut vbo: GLuint = 0;
+    let mut vbo: GLuint = 0; // Vertex Buffer
+    let mut ibo: GLuint = 0; // Index Buffer
     let mut vao: GLuint = 0;
 
     unsafe {
         gl::Viewport(0, 0, 800, 600);
         gl::GenBuffers(1, &mut vbo);
+        gl::GenBuffers(1, &mut ibo);
 
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
 
         gl::BufferData(
             gl::ARRAY_BUFFER, // buffer type
@@ -206,7 +225,15 @@ fn main()  {
             gl::STATIC_DRAW // use for the buffer
         );
 
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            (indices.len() * std::mem::size_of::<f32>()) as GLsizeiptr,
+            indices.as_ptr() as *const GLvoid,
+            gl::STATIC_DRAW
+        );
+
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
 
         gl::GenVertexArrays(1, &mut vao);
 
@@ -219,7 +246,7 @@ fn main()  {
             3, // component count
             gl::FLOAT, // type
             gl::FALSE, // normalized
-            (3 * std::mem::size_of::<f32>() as GLint), // stride
+            4 * std::mem::size_of::<f32>() as GLint, // stride
             std::ptr::null()
         );
 
@@ -241,6 +268,7 @@ fn main()  {
                 _ => {}
             }
         }
+
         // Enable shader
         shader_program.set_active();
 
@@ -248,14 +276,23 @@ fn main()  {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::BindVertexArray(vao);
-            gl::DrawArrays(
-                gl::TRIANGLES, // mode
-                0, // start index
-                3, // number of indices
-            );
+            // gl::DrawArrays(
+            //     gl::TRIANGLES, // mode
+            //     0, // start index
+            //     3, // number of indices
+            // );
+
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+            gl::DrawElements(
+                gl::TRIANGLES,
+                6,
+                gl::UNSIGNED_SHORT,
+                0 as *const GLvoid
+            )
         }
 
-        window.gl_swap_window();
+       window.gl_swap_window();
     }
 
+    Ok(())
 }
