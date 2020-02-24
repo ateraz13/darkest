@@ -1,3 +1,5 @@
+extern crate nalgebra as na;
+
 pub mod resource;
 pub mod mgl;
 
@@ -140,6 +142,7 @@ fn main()  -> io::Result<()>{
 
     let mut vao: GLuint = 0;
 
+
     unsafe {
         gl::Viewport(0, 0, 800, 600);
 
@@ -231,7 +234,12 @@ fn main()  -> io::Result<()>{
         gl::ClearColor(0.3, 0.0, 0.3, 1.0);
     }
 
+
+    let timer = std::time::Instant::now();
+
     'main_loop: loop {
+
+        let time = timer.elapsed();
 
         for event in event_pump.poll_iter() {
 
@@ -242,18 +250,25 @@ fn main()  -> io::Result<()>{
             }
         }
 
+
         // Enable shader
         shader_program.set_active();
+
+        let rotation = na::Rotation3::from_axis_angle(
+            &na::Vector3::y_axis(),
+            time.as_millis() as f32 *0.0001
+        );
 
         // Drawing code
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::BindVertexArray(vao);
-            // gl::DrawArrays(
-            //     gl::TRIANGLES, // mode
-            //     0, // start index
-            //     3, // number of indices
-            // );
+
+            gl::UniformMatrix4fv(
+                3, 1, gl::FALSE, (na::Matrix4::<f32>::from(rotation )).as_ptr()
+            );
+
+            gl::Uniform1f(4, time.as_millis() as f32 / 1000.0);
 
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
             gl::DrawElements(
@@ -265,6 +280,17 @@ fn main()  -> io::Result<()>{
         }
 
        window.gl_swap_window();
+
+        // Limit the framerate to 60 FPS
+        let time_end = timer.elapsed();
+        let frame_duration = time_end - time;
+
+        let max_frame_duration = std::time::Duration::from_millis(1000/60);
+
+        std::thread::sleep(
+            max_frame_duration.checked_sub(frame_duration)
+                              .unwrap_or(std::time::Duration::new(0,0))
+        );
     }
 
     Ok(())
