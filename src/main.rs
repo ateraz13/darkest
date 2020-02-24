@@ -1,3 +1,6 @@
+pub mod resource;
+pub mod mgl;
+
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::ffi::{CString, CStr};
@@ -13,145 +16,51 @@ use gl::types::*;
 // On failure OpenGL code could be tested in
 // debbug mode.
 
-pub mod resource;
 
-pub mod mgl {
+pub enum AttributeType {
+    Vec2, Vec3, Vec4
+}
 
-    pub mod core {
 
-        use std::ffi::{CString, CStr};
+pub struct VertexAttributes {
+    pub pos_comp_type: AttributeType,
+    // NOTE: we do not use vector types for attributes because we may want
+    // different number of components for some attributes
+    pub positions: Vec<f32>, // 2 or 3 components per position
+    pub normals: Vec<f32>, // 3 components per normal
+    pub uvs: Vec<f32> // 2 components per uv
+}
 
-        pub struct Shader {
-            id: gl::types::GLuint,
+impl VertexAttributes {
+
+    pub fn position_buffer_size(&self) -> GLsizeiptr {
+        (self.positions.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+    }
+
+    pub fn normal_buffer_size(&self) -> GLsizeiptr {
+        (self.normals.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+    }
+
+    pub fn uv_buffer_size(&self) -> GLsizeiptr {
+        (self.uvs.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+    }
+
+    pub unsafe fn position_buffer_ptr(&self) -> *const GLvoid {
+        unsafe {
+            self.positions.as_ptr() as *const GLvoid
         }
+    }
 
-        pub struct ShaderProgram {
-            id: gl::types::GLuint
+    pub unsafe fn normal_buffer_ptr(&self) -> *const GLvoid {
+        unsafe {
+            self.normals.as_ptr() as *const GLvoid
         }
+    }
 
-        fn prepare_whitespaced_cstring_with_len(len: usize) -> CString {
-
-            let mut buffer: Vec<u8> = Vec::with_capacity(len + 1);
-            buffer.extend([b' '].iter().cycle().take(len));
-            unsafe { CString::from_vec_unchecked(buffer) }
+    pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
+        unsafe {
+            self.uvs.as_ptr() as *const GLvoid
         }
-
-        impl ShaderProgram {
-
-            pub fn set_active(&self) {
-                unsafe { gl::UseProgram(self.id); }
-            }
-
-            pub fn from_shaders(
-                shaders: &[Shader]
-            ) -> Result<Self, String> {
-
-                use gl::types::*;
-
-                let program_id = unsafe { gl::CreateProgram() };
-
-                for shader in shaders {
-                    unsafe { gl::AttachShader(program_id, shader.id()); }
-                }
-
-                unsafe { gl::LinkProgram(program_id); }
-
-                for shader in shaders {
-                    unsafe { gl::DetachShader(program_id, shader.id()) };
-                }
-
-                let mut success : GLint = 1;
-                unsafe { gl::GetProgramiv(program_id, gl::LINK_STATUS, &mut success); }
-
-                if success == 0 {
-
-                    let mut mesg_len : GLint = 1;
-                    unsafe { gl::GetProgramiv(program_id, gl::INFO_LOG_LENGTH, &mut mesg_len); }
-
-                    let mut mesg = prepare_whitespaced_cstring_with_len(mesg_len as usize);
-
-                    unsafe {
-                        gl::GetProgramInfoLog(
-                            program_id,
-                            mesg_len,
-                            std::ptr::null_mut(),
-                            mesg.as_ptr() as *mut GLchar
-                        )
-                    }
-
-                    return Err(mesg.to_string_lossy().into_owned());
-                }
-
-                return Ok(Self { id: program_id });
-            }
-
-        }
-
-        impl Shader {
-
-            pub fn from_source (
-                shader_source: &CStr,
-                shader_type: gl::types::GLenum
-            ) -> Result<Self, String> {
-
-                use gl::types::*;
-
-                let id = unsafe { gl::CreateShader(shader_type) };
-
-                unsafe {
-                    gl::ShaderSource(id, 1, &shader_source.as_ptr(), std::ptr::null());
-                    gl::CompileShader(id);
-                }
-
-                let mut success: GLint = 1;
-                unsafe {
-                    gl::GetShaderiv(id, gl::COMPILE_STATUS, &mut success);
-                }
-
-                if success == 0 {
-                    let mut len: GLint = 1;
-                    unsafe {
-                        gl::GetShaderiv(id, gl::INFO_LOG_LENGTH, &mut len);
-                    }
-
-                    let mesg = prepare_whitespaced_cstring_with_len(len as usize);
-
-                    unsafe {
-                        gl::GetShaderInfoLog(
-                            id, len,
-                            std::ptr::null_mut(),
-                            mesg.as_ptr() as *mut GLchar
-                        );
-                    }
-
-                    return Err(mesg.to_string_lossy().into_owned());
-                }
-
-                return Ok(Self { id });
-            }
-
-            pub fn id(&self) -> gl::types::GLuint {
-                self.id
-            }
-
-        }
-
-        impl Drop for Shader {
-            fn drop (&mut self) {
-                unsafe {
-                    gl::DeleteShader(self.id);
-                }
-            }
-        }
-
-        impl Drop for ShaderProgram {
-            fn drop(&mut self) {
-                unsafe {
-                    gl::DeleteProgram(self.id);
-                }
-            }
-        }
-
     }
 }
 
@@ -195,33 +104,57 @@ fn main()  -> io::Result<()>{
     let shader_program = mgl::core::ShaderProgram::from_shaders(&[vert_shader, frag_shader])
         .expect("Could not link shader program!");
 
-    let vertices: Vec<f32> = vec![
-        -0.5, 0.5, 0.0,
-        -0.5, -0.5, 0.0,
-        0.5, -0.5, 0.0,
-        0.5, 0.5, 0.0,
+    let indices: Vec<u16> =  vec![
+        0, 1, 3, 2, 3, 1
     ];
 
-    let indices: Vec<GLushort> = vec![
-         0, 1, 3, 2, 3, 0
-    ];
+    let vert_attrs = VertexAttributes {
 
-    let mut vbo: GLuint = 0; // Vertex Buffer
-    let mut ibo: GLuint = 0; // Index Buffer
+        pos_comp_type: AttributeType::Vec3,
+
+        // 3 components per position
+        positions:  vec![
+            -0.5, 0.5, 0.0,  // bottom right
+            -0.5, -0.5, 0.0, // bottom left
+            0.5, -0.5, 0.0,  // top left
+            0.5, 0.5, 0.0,   // top right
+        ],
+        normals: vec![
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+        ],
+        uvs: vec! [
+            1.0, 0.0,
+            0.0, 0.0,
+            1.0, 0.0,
+            1.0, 1.0
+        ]
+    };
+
+    let mut position_buffer: GLuint = 0;
+    let mut index_buffer: GLuint = 0;
+    let mut normal_buffer: GLuint = 0;
+    let mut uv_buffer: GLuint = 0;
+
     let mut vao: GLuint = 0;
 
     unsafe {
         gl::Viewport(0, 0, 800, 600);
-        gl::GenBuffers(1, &mut vbo);
-        gl::GenBuffers(1, &mut ibo);
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+        gl::GenBuffers(1, &mut position_buffer);
+        gl::GenBuffers(1, &mut normal_buffer);
+        gl::GenBuffers(1, &mut uv_buffer);
+        gl::GenBuffers(1, &mut index_buffer);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, position_buffer);
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
 
         gl::BufferData(
             gl::ARRAY_BUFFER, // buffer type
-            (vertices.len() * std::mem::size_of::<f32>()) as GLsizeiptr, // amount of data being sent
-            vertices.as_ptr() as *const GLvoid, //  pointer to local buffer
+            vert_attrs.position_buffer_size(),
+            vert_attrs.position_buffer_ptr(),
             gl::STATIC_DRAW // use for the buffer
         );
 
@@ -232,13 +165,31 @@ fn main()  -> io::Result<()>{
             gl::STATIC_DRAW
         );
 
+        gl::BindBuffer(gl::ARRAY_BUFFER, normal_buffer);
+
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            vert_attrs.normal_buffer_size(),
+            vert_attrs.normal_buffer_ptr(),
+            gl::STATIC_DRAW
+        );
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, uv_buffer);
+
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            vert_attrs.uv_buffer_size(),
+            vert_attrs.uv_buffer_ptr(),
+            gl::STATIC_DRAW
+        );
+
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
 
         gl::GenVertexArrays(1, &mut vao);
 
         gl::BindVertexArray(vao);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, position_buffer);
 
         gl::EnableVertexAttribArray(0);
         gl::VertexAttribPointer(
@@ -246,11 +197,33 @@ fn main()  -> io::Result<()>{
             3, // component count
             gl::FLOAT, // type
             gl::FALSE, // normalized
-            4 * std::mem::size_of::<f32>() as GLint, // stride
+            0,
             std::ptr::null()
         );
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::EnableVertexAttribArray(1);
+        gl::BindBuffer(gl::ARRAY_BUFFER, normal_buffer);
+        gl::VertexAttribPointer(
+            1,
+            3,
+            gl::FLOAT,
+            gl::TRUE,
+            0,
+            std::ptr::null()
+        );
+
+        gl::EnableVertexAttribArray(2);
+        gl::BindBuffer(gl::ARRAY_BUFFER, uv_buffer);
+        gl::VertexAttribPointer(
+            2,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            0,
+            std::ptr::null()
+        );
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, position_buffer);
         gl::BindVertexArray(0);
     }
 
@@ -282,7 +255,7 @@ fn main()  -> io::Result<()>{
             //     3, // number of indices
             // );
 
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ibo);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
             gl::DrawElements(
                 gl::TRIANGLES,
                 6,
