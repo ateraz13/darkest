@@ -22,7 +22,6 @@ pub enum AttributeType {
     Vec2, Vec3, Vec4
 }
 
-
 pub struct VertexAttributes {
     pub pos_comp_type: AttributeType,
     // NOTE: we do not use vector types for attributes because we may want
