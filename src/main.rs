@@ -5,7 +5,6 @@ pub mod mgl;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use std::ffi::{CString, CStr};
 use std::path::Path;
 use std::io;
 use gl::types::*;
@@ -48,25 +47,19 @@ impl VertexAttributes {
     }
 
     pub unsafe fn position_buffer_ptr(&self) -> *const GLvoid {
-        unsafe {
             self.positions.as_ptr() as *const GLvoid
-        }
     }
 
     pub unsafe fn normal_buffer_ptr(&self) -> *const GLvoid {
-        unsafe {
             self.normals.as_ptr() as *const GLvoid
-        }
     }
 
     pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
-        unsafe {
-            self.uvs.as_ptr() as *const GLvoid
-        }
+        self.uvs.as_ptr() as *const GLvoid
     }
 }
 
-fn main()  -> io::Result<()>{
+fn main() -> io::Result<()>{
 
     let sdl = sdl2::init().unwrap();
     let sdl_video = sdl.video()
@@ -83,10 +76,10 @@ fn main()  -> io::Result<()>{
         .build()
         .expect("Could not create SDL2 window!");
 
-    let gl_ctx = window.gl_create_context()
+    let _gl_ctx = window.gl_create_context()
                        .expect("Could not initialise OpenGL context!");
 
-    let gl = gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
+    let _gl = gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
     let mut event_pump = sdl.event_pump()
                             .expect("Could not initialise SDL2 event pump!");
@@ -237,6 +230,14 @@ fn main()  -> io::Result<()>{
 
     let timer = std::time::Instant::now();
 
+    let view = {
+        let eye    = na::Point3::new(0.0, 0.0, 1.2);
+        let target = na::Point3::new(1.0, 0.0, 0.0);
+        na::Isometry3::look_at_rh(&eye, &target, &na::Vector3::y())
+    };
+
+    let projection = na::Perspective3::new(4.0 / 3.0, 3.14 / 2.0, 1.0, 1000.0);
+
     'main_loop: loop {
 
         let time = timer.elapsed();
@@ -250,25 +251,40 @@ fn main()  -> io::Result<()>{
             }
         }
 
-
         // Enable shader
         shader_program.set_active();
 
-        let rotation = na::Rotation3::from_axis_angle(
-            &na::Vector3::y_axis(),
-            time.as_millis() as f32 *0.0001
+        let model =  na::Isometry3::<f32>::new(
+            na::Vector3::x(), // translation
+            na::Vector3::new(0.0, (time.as_millis() as f32 * 0.0005).sin()-3.14/5.0, 0.0) // rotation
         );
+
+        let model_mat  = model.to_homogeneous(); //na::Matrix4::<f32>::from( rotation );
+        let model_view = view * model;
+        let normal_mat = model_view.inverse().to_homogeneous().transpose();
+        let proj_mat  = projection.as_matrix();
+        let mvp = projection.into_inner() * model_view.to_homogeneous();
 
         // Drawing code
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::BindVertexArray(vao);
 
+            gl::UniformMatrix4fv(5, 1, gl::FALSE, normal_mat.as_ptr());
+
             gl::UniformMatrix4fv(
-                3, 1, gl::FALSE, (na::Matrix4::<f32>::from(rotation )).as_ptr()
+                4, 1, gl::FALSE, mvp.as_ptr()
             );
 
-            gl::Uniform1f(4, time.as_millis() as f32 / 1000.0);
+            gl::UniformMatrix4fv(
+              3, 1, gl::FALSE, proj_mat.as_ptr()
+            );
+
+            gl::UniformMatrix4fv(
+                1, 1, gl::FALSE, model_mat.as_ptr()
+            );
+
+            gl::Uniform1f(6, time.as_millis() as f32 / 1000.0);
 
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
             gl::DrawElements(

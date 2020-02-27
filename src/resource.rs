@@ -53,9 +53,7 @@ impl BufferLoader {
 
     pub fn load_bytes(&self, file_path: &Path) -> io::Result<Vec<u8>> {
 
-        let full_path = prepare_full_path!(self.root, file_path);
-
-        let full_path = self.root.join(file_path);
+        let full_path = self.root.join(prepare_full_path!(self.root, file_path));
         let mut file = File::open(full_path)?;
         let mut data = vec![];
         file.read_to_end(&mut data)?;

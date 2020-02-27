@@ -50,7 +50,7 @@ pub mod core {
                 let mut mesg_len : GLint = 1;
                 unsafe { gl::GetProgramiv(program_id, gl::INFO_LOG_LENGTH, &mut mesg_len); }
 
-                let mut mesg = prepare_whitespaced_cstring_with_len(mesg_len as usize);
+                let mesg = prepare_whitespaced_cstring_with_len(mesg_len as usize);
 
                 unsafe {
                     gl::GetProgramInfoLog(
