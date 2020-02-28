@@ -1,5 +1,52 @@
 
+pub mod attr {
+
+    use gl::types::*;
+
+    pub enum AttributeType {
+        Vec2, Vec3, Vec4
+    }
+
+    pub struct VertexAttributes {
+        pub pos_comp_type: AttributeType,
+        // NOTE: we do not use vector types for attributes because we may want
+        // different number of components for some attributes
+        pub positions: Vec<f32>, // 2 or 3 components per position
+        pub normals: Vec<f32>, // 3 components per normal
+        pub uvs: Vec<f32> // 2 components per uv
+    }
+
+    impl VertexAttributes {
+
+        pub fn position_buffer_size(&self) -> GLsizeiptr {
+            (self.positions.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+        }
+
+        pub fn normal_buffer_size(&self) -> GLsizeiptr {
+            (self.normals.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+        }
+
+        pub fn uv_buffer_size(&self) -> GLsizeiptr {
+            (self.uvs.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+        }
+
+        pub unsafe fn position_buffer_ptr(&self) -> *const GLvoid {
+            self.positions.as_ptr() as *const GLvoid
+        }
+
+        pub unsafe fn normal_buffer_ptr(&self) -> *const GLvoid {
+            self.normals.as_ptr() as *const GLvoid
+        }
+
+        pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
+            self.uvs.as_ptr() as *const GLvoid
+        }
+    }
+}
+
 pub mod core {
+
+
 
     use std::ffi::{CString, CStr};
 

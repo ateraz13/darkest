@@ -2,6 +2,7 @@ extern crate nalgebra as na;
 
 pub mod resource;
 pub mod mgl;
+pub mod core;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -18,80 +19,58 @@ use gl::types::*;
 // debbug mode.
 
 
-pub enum AttributeType {
-    Vec2, Vec3, Vec4
+struct RgbImage {
+    width: u32,
+    height: u32,
+    pixels: Vec<u8>,
 }
 
-pub struct VertexAttributes {
-    pub pos_comp_type: AttributeType,
-    // NOTE: we do not use vector types for attributes because we may want
-    // different number of components for some attributes
-    pub positions: Vec<f32>, // 2 or 3 components per position
-    pub normals: Vec<f32>, // 3 components per normal
-    pub uvs: Vec<f32> // 2 components per uv
+impl RgbImage {
+
+    pub fn load_from_png (path: &Path) -> io::Result<Self> {
+
+        let mut image = RgbImage {
+            width: 0, height: 0, pixels: vec![]
+        };
+        let file  = std::fs::File::open(path)?;
+        let decoder = png::Decoder::new(file);
+
+        let (_info, mut reader) = decoder.read_info().unwrap();
+        reader.next_frame(&mut image.pixels).unwrap();
+
+        Ok(image)
+    }
+
 }
 
-impl VertexAttributes {
-
-    pub fn position_buffer_size(&self) -> GLsizeiptr {
-        (self.positions.len() * std::mem::size_of::<f32>()) as GLsizeiptr
-    }
-
-    pub fn normal_buffer_size(&self) -> GLsizeiptr {
-        (self.normals.len() * std::mem::size_of::<f32>()) as GLsizeiptr
-    }
-
-    pub fn uv_buffer_size(&self) -> GLsizeiptr {
-        (self.uvs.len() * std::mem::size_of::<f32>()) as GLsizeiptr
-    }
-
-    pub unsafe fn position_buffer_ptr(&self) -> *const GLvoid {
-            self.positions.as_ptr() as *const GLvoid
-    }
-
-    pub unsafe fn normal_buffer_ptr(&self) -> *const GLvoid {
-            self.normals.as_ptr() as *const GLvoid
-    }
-
-    pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
-        self.uvs.as_ptr() as *const GLvoid
+fn configure_texture_parameters () {
+    unsafe {
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::MIRRORED_REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::MIRRORED_REPEAT as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR_MIPMAP_LINEAR as i32);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
     }
 }
 
-fn main() -> io::Result<()>{
+fn main () -> io::Result<()> {
 
-    let sdl = sdl2::init().unwrap();
-    let sdl_video = sdl.video()
-                       .expect("Could not initialise SDL2 context!");
+    let app_cfg = core::AppConfig {
+        window_size: (800, 600),
+        window_title: ("darkest v0.1.0".to_owned())
+    };
 
-    let gl_attr = sdl_video.gl_attr();
-    gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
-    gl_attr.set_context_version(3, 3);
-
-    let window = sdl_video
-        .window("darkest v0.01a", 800, 600)
-        .opengl()
-//        .resizable()
-        .build()
-        .expect("Could not create SDL2 window!");
-
-    let _gl_ctx = window.gl_create_context()
-                       .expect("Could not initialise OpenGL context!");
-
-    let _gl = gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
-
-    let mut event_pump = sdl.event_pump()
-                            .expect("Could not initialise SDL2 event pump!");
-
-    let buf_loader = resource::BufferLoader::relative_to_exe()?;
+    let mut app = core::AppCore::init(app_cfg).unwrap();
+    configure_texture_parameters();
 
     let vert_shader = mgl::core::Shader::from_source (
-        &buf_loader.load_cstring(Path::new("shaders/basic_vert.glsl"))?,
+        &app.buffer_loader.load_cstring(Path::new("shaders/basic_vert.glsl"))?,
         gl::VERTEX_SHADER
     ).expect("Could not load vertex shader!`");
 
     let frag_shader = mgl::core::Shader::from_source (
-        &buf_loader.load_cstring(Path::new("shaders/basic_frag.glsl"))?,
+        &app.buffer_loader.load_cstring(Path::new("shaders/basic_frag.glsl"))?,
         gl::FRAGMENT_SHADER
     ).expect("Could not load fragment shader!");
 
@@ -102,9 +81,9 @@ fn main() -> io::Result<()>{
         0, 1, 3, 2, 3, 1
     ];
 
-    let vert_attrs = VertexAttributes {
+    let vert_attrs = mgl::attr::VertexAttributes {
 
-        pos_comp_type: AttributeType::Vec3,
+        pos_comp_type: mgl::attr::AttributeType::Vec3,
 
         // 3 components per position
         positions:  vec![
@@ -241,7 +220,7 @@ fn main() -> io::Result<()>{
 
         let time = timer.elapsed();
 
-        for event in event_pump.poll_iter() {
+        for event in app.sdl_event_pump.poll_iter() {
 
             match event {
                 Event::Quit {..} => break 'main_loop,
@@ -294,7 +273,7 @@ fn main() -> io::Result<()>{
             )
         }
 
-       window.gl_swap_window();
+       app.sdl_window.gl_swap_window();
 
         // Limit the framerate to 60 FPS
         let time_end = timer.elapsed();

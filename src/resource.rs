@@ -30,9 +30,6 @@ macro_rules! prepare_full_path {
 
 impl BufferLoader {
 
-
-
-
     pub fn relative_to_exe() -> io::Result<Self> {
         let exe_path = env::current_exe()?;
         Ok (Self {root: exe_path.parent().unwrap().to_path_buf()})
