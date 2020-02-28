@@ -59,34 +59,22 @@ fn main () -> io::Result<()> {
         0, 1, 3, 2, 3, 1
     ];
 
-
     let ((img_diffuse_w, img_diffuse_h), img_diffuse_pixels) = {
 
-        let png_path = std::env::current_exe()?.parent().unwrap().join("assets/container2.png");
-        let img = {
-            let generic_img = image::load(
-                BufReader::new(File::open(png_path)?),
-                image::ImageFormat::Png
-            ).unwrap();
-            generic_img.as_rgba8().unwrap().clone()
-        };
-
+        let img = image::load(
+            std::io::Cursor::new(&app.buffer_loader.load_bytes(Path::new("assets/diff.png")).unwrap()[..]),
+            image::ImageFormat::Png
+        ).unwrap().to_rgba();
 
         (img.dimensions(), img.into_raw())
     };
 
     let ((img_specular_w, img_specular_h), img_specular_pixels) = {
 
-        let png_path = std::env::current_exe()?.parent().unwrap().join("assets/container2_specular.png");
-
-        let img = {
-            let generic_img = image::load(
-                BufReader::new(File::open(png_path)?),
-                image::ImageFormat::Png
-            ).unwrap();
-            generic_img.as_rgba8().unwrap().clone()
-        };
-
+        let img = image::load(
+            std::io::Cursor::new(&app.buffer_loader.load_bytes(Path::new("assets/spec.png")).unwrap()[..]),
+            image::ImageFormat::Png
+        ).unwrap().to_rgba();
 
         (img.dimensions(), img.into_raw())
     };
