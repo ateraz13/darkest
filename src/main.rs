@@ -59,10 +59,26 @@ fn main () -> io::Result<()> {
         0, 1, 3, 2, 3, 1
     ];
 
-    let png_path = std::env::current_exe()?.parent().unwrap().join("assets/container2.png");
 
-    println!("PNG_PATH: {}", png_path.display());
-    let ((img_w, img_h), img_pixels) = {
+    let ((img_diffuse_w, img_diffuse_h), img_diffuse_pixels) = {
+
+        let png_path = std::env::current_exe()?.parent().unwrap().join("assets/container2.png");
+        let img = {
+            let generic_img = image::load(
+                BufReader::new(File::open(png_path)?),
+                image::ImageFormat::Png
+            ).unwrap();
+            generic_img.as_rgba8().unwrap().clone()
+        };
+
+
+        (img.dimensions(), img.into_raw())
+    };
+
+    let ((img_specular_w, img_specular_h), img_specular_pixels) = {
+
+        let png_path = std::env::current_exe()?.parent().unwrap().join("assets/container2_specular.png");
+
         let img = {
             let generic_img = image::load(
                 BufReader::new(File::open(png_path)?),
@@ -104,9 +120,8 @@ fn main () -> io::Result<()> {
     let mut index_buffer: GLuint = 0;
     let mut normal_buffer: GLuint = 0;
     let mut uv_buffer: GLuint = 0;
-    let mut texture: GLuint = 0;
-
-
+    let mut diffuse_texture: GLuint = 0;
+    let mut specular_texture: GLuint = 0;
     let mut vao: GLuint = 0;
 
 
@@ -117,7 +132,8 @@ fn main () -> io::Result<()> {
         gl::GenBuffers(1, &mut normal_buffer);
         gl::GenBuffers(1, &mut uv_buffer);
         gl::GenBuffers(1, &mut index_buffer);
-        gl::GenTextures(1, &mut texture);
+        gl::GenTextures(1, &mut diffuse_texture);
+        gl::GenTextures(1, &mut specular_texture);
 
         gl::BindBuffer(gl::ARRAY_BUFFER, position_buffer);
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
@@ -199,12 +215,21 @@ fn main () -> io::Result<()> {
         gl::BindBuffer(gl::ARRAY_BUFFER, position_buffer);
         gl::BindVertexArray(0);
 
-        gl::BindTexture(gl::TEXTURE_2D, texture);
-        // gl::ActiveTexture(gl::TEXTURE0 + 7);
 
-        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, img_w as i32, img_h as i32,
-                       0, gl::RGBA, gl::UNSIGNED_BYTE, img_pixels.as_ptr() as *const GLvoid);
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, diffuse_texture);
+
+        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, img_diffuse_w as i32, img_diffuse_h as i32,
+                       0, gl::RGBA, gl::UNSIGNED_BYTE, img_diffuse_pixels.as_ptr() as *const GLvoid);
         gl::GenerateMipmap(gl::TEXTURE_2D);
+
+        gl::ActiveTexture(gl::TEXTURE0 + 1);
+        gl::BindTexture(gl::TEXTURE_2D, specular_texture);
+
+        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, img_specular_w as i32, img_specular_h as i32,
+                       0, gl::RGBA, gl::UNSIGNED_BYTE, img_specular_pixels.as_ptr() as *const GLvoid);
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+
     }
 
     unsafe {
@@ -238,6 +263,7 @@ fn main () -> io::Result<()> {
         // Enable shader
         shader_program.set_active();
 
+
         let model =  na::Isometry3::<f32>::new(
             na::Vector3::x(), // translation
             na::Vector3::new(0.0, (time.as_millis() as f32 * 0.0005).sin()-3.14/5.0, 0.0) // rotation
@@ -251,8 +277,14 @@ fn main () -> io::Result<()> {
 
         // Drawing code
         unsafe {
+
+
+
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::BindVertexArray(vao);
+
+            gl::Uniform1i(7, 0); // Texture Unit 0 : DIFFUSE
+            gl::Uniform1i(8, 1); // Texture Unit 0 : SPECULAR
 
             gl::UniformMatrix4fv(5, 1, gl::FALSE, normal_mat.as_ptr());
 

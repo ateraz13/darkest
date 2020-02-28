@@ -14,8 +14,10 @@ layout (location = 6) uniform float time;
 
 flat out vec3 frag_normal;
 smooth out vec4 frag_position;
+out vec2 frag_uv;
 
 void main() {
      frag_normal = normalize(mat3(normal_mat) * normal);
+     frag_uv = uv;
      gl_Position = frag_position = mvp * vec4(position, 1.0);
 }
