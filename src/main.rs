@@ -9,6 +9,8 @@ use sdl2::keyboard::Keycode;
 use std::path::Path;
 use std::io;
 use gl::types::*;
+use std::fs::File;
+use std::io::BufReader;
 
 
 // TODO: Start preparing debug.rs
@@ -18,30 +20,6 @@ use gl::types::*;
 // On failure OpenGL code could be tested in
 // debbug mode.
 
-
-struct RgbImage {
-    width: u32,
-    height: u32,
-    pixels: Vec<u8>,
-}
-
-impl RgbImage {
-
-    pub fn load_from_png (path: &Path) -> io::Result<Self> {
-
-        let mut image = RgbImage {
-            width: 0, height: 0, pixels: vec![]
-        };
-        let file  = std::fs::File::open(path)?;
-        let decoder = png::Decoder::new(file);
-
-        let (_info, mut reader) = decoder.read_info().unwrap();
-        reader.next_frame(&mut image.pixels).unwrap();
-
-        Ok(image)
-    }
-
-}
 
 fn configure_texture_parameters () {
     unsafe {
@@ -81,6 +59,22 @@ fn main () -> io::Result<()> {
         0, 1, 3, 2, 3, 1
     ];
 
+    let png_path = std::env::current_exe()?.parent().unwrap().join("assets/container2.png");
+
+    println!("PNG_PATH: {}", png_path.display());
+    let ((img_w, img_h), img_pixels) = {
+        let img = {
+            let generic_img = image::load(
+                BufReader::new(File::open(png_path)?),
+                image::ImageFormat::Png
+            ).unwrap();
+            generic_img.as_rgba8().unwrap().clone()
+        };
+
+
+        (img.dimensions(), img.into_raw())
+    };
+
     let vert_attrs = mgl::attr::VertexAttributes {
 
         pos_comp_type: mgl::attr::AttributeType::Vec3,
@@ -101,7 +95,7 @@ fn main () -> io::Result<()> {
         uvs: vec! [
             1.0, 0.0,
             0.0, 0.0,
-            1.0, 0.0,
+            0.0, 1.0,
             1.0, 1.0
         ]
     };
@@ -110,6 +104,8 @@ fn main () -> io::Result<()> {
     let mut index_buffer: GLuint = 0;
     let mut normal_buffer: GLuint = 0;
     let mut uv_buffer: GLuint = 0;
+    let mut texture: GLuint = 0;
+
 
     let mut vao: GLuint = 0;
 
@@ -121,6 +117,7 @@ fn main () -> io::Result<()> {
         gl::GenBuffers(1, &mut normal_buffer);
         gl::GenBuffers(1, &mut uv_buffer);
         gl::GenBuffers(1, &mut index_buffer);
+        gl::GenTextures(1, &mut texture);
 
         gl::BindBuffer(gl::ARRAY_BUFFER, position_buffer);
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
@@ -159,6 +156,8 @@ fn main () -> io::Result<()> {
 
         gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
+
+
 
         gl::GenVertexArrays(1, &mut vao);
 
@@ -199,6 +198,13 @@ fn main () -> io::Result<()> {
 
         gl::BindBuffer(gl::ARRAY_BUFFER, position_buffer);
         gl::BindVertexArray(0);
+
+        gl::BindTexture(gl::TEXTURE_2D, texture);
+        // gl::ActiveTexture(gl::TEXTURE0 + 7);
+
+        gl::TexImage2D(gl::TEXTURE_2D, 0, gl::RGBA as i32, img_w as i32, img_h as i32,
+                       0, gl::RGBA, gl::UNSIGNED_BYTE, img_pixels.as_ptr() as *const GLvoid);
+        gl::GenerateMipmap(gl::TEXTURE_2D);
     }
 
     unsafe {
