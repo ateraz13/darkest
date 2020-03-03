@@ -18,6 +18,6 @@ out vec2 frag_uv;
 
 void main() {
      frag_normal = normalize(mat3(normal_mat) * normal);
-     frag_uv = uv;
+     frag_uv = vec2(uv.x, 1.0-uv.y);
      gl_Position = frag_position = mvp * vec4(position, 1.0);
 }

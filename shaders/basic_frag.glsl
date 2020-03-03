@@ -1,5 +1,6 @@
 #version 330 core
 #extension GL_ARB_explicit_uniform_location : enable
+//#extension GL_EXT_texture_compression_s3tc : enable
 
 out vec4 frag_color;
 
@@ -22,22 +23,11 @@ struct Sun {
 
 uniform Sun sun = Sun (
    vec3(0,0,0),
-   vec3(0.0, 0.0, 0.0),
+   vec3(0.50, 0.50, 0.50),
    vec3(0.95, 0.8, 0.8),
    vec3(1.0, 1.0, 1.0)
 );
 
-struct Surface {
-  vec3 ambient;
-  vec3 diffuse;
-  vec3 specular;
-};
-
-uniform Surface surface = Surface (
-   vec3(0.0, 0.0, 0.0),
-   vec3(1.0, 1.0, 1.0),
-   vec3(0.1, 0.1, 0.1)
-);
 
 uniform float specular_power = 2.0;
 uniform float specular_intensity = 0.1;

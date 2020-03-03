@@ -7,6 +7,5 @@ build = "build.rs"
 
 [dependencies]
 sdl2 = "0.31.0"
-gl = "0.10.0"
+gl = { path = "lib/gl" }
 nalgebra = "0.18.0"
-image = "0.23.0"
