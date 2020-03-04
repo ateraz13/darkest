@@ -248,10 +248,10 @@ fn main () -> io::Result<()> {
 
         // 3 components per position
         positions:  vec![
-            -0.5, 0.5, 0.0,  // bottom right
-            -0.5, -0.5, 0.0, // bottom left
-            0.5, -0.5, 0.0,  // top left
-            0.5, 0.5, 0.0,   // top right
+            -1.0, 1.0, 0.0,  // bottom right
+            -1.0, -1.0, 0.0, // bottom left
+            1.0, -1.0, 0.0,  // top left
+            1.0, 1.0, 0.0,   // top right
         ],
         normals: vec![
             0.0, 0.0, 1.0,
@@ -277,6 +277,7 @@ fn main () -> io::Result<()> {
 
     unsafe {
         gl::Viewport(0, 0, 800, 600);
+        gl::Enable(gl::DEPTH_TEST);
 
         gl::GenBuffers(1, &mut position_buffer);
         gl::GenBuffers(1, &mut normal_buffer);
@@ -401,9 +402,14 @@ fn main () -> io::Result<()> {
     let timer = std::time::Instant::now();
 
     let view = {
-        let eye    = na::Point3::new(0.0, 0.0, 1.2);
-        let target = na::Point3::new(1.0, 0.0, 0.0);
-        na::Isometry3::look_at_rh(&eye, &target, &na::Vector3::y())
+
+        let eye_pos = na::Point3::new(0.0, 0.0, 3.0);
+        let target = na::Point3::new(0.0, 0.0, 0.0);
+        na::Isometry3::look_at_rh(&eye_pos, &target, &na::Vector3::y())
+
+        // let trans = na::Translation3::new(0.0, 0.0, 0.0);
+        // let rot = na::UnitQuaternion::from_scaled_axis(na::Vector3::y() * std::f32::consts::FRAC_PI_2);
+        // na::Isometry3::from_parts(trans, rot)
     };
 
     let Vec2 = |x,y| na::Vector2::new(x,y);
@@ -414,6 +420,7 @@ fn main () -> io::Result<()> {
     let mut mouse_motion = Vec2(0.0f32, 0.0f32);
     let mut camera_rotate_active = false;
     let mut model_rotation = Vec3(0.0f32, 0.0f32, 0.0f32);
+    let mut enable_blinn = false;
 
     'main_loop: loop {
 
@@ -432,6 +439,15 @@ fn main () -> io::Result<()> {
                             Keycode::R => {
                                 model_rotation = Vec3(0.0f32, 0.0, 0.0);
                             },
+                            Keycode::B => {
+                                if enable_blinn {
+                                    unsafe {gl::Uniform1i(20, 0);}
+                                    enable_blinn = false;
+                                } else {
+                                    unsafe {gl::Uniform1i(20, 1);}
+                                    enable_blinn = true;
+                                }
+                            }
                             _ => {},
                         }
                     }
@@ -475,7 +491,7 @@ fn main () -> io::Result<()> {
         }
 
         let model =  na::Isometry3::<f32>::new(
-            na::Vector3::x(), // translation
+            na::Vector3::new(0.0,0.0,0.0), // translation
             // na::Vector3::new(0.0(time.as_millis() as f32 * 0.0005).sin()-3.14/5.0, 0.0) // rotation
             model_rotation
         );
@@ -489,7 +505,7 @@ fn main () -> io::Result<()> {
         // Drawing code
         unsafe {
 
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::BindVertexArray(vao);
 
             gl::Uniform1i(7, 0); // Texture Unit 0 : DIFFUSE
@@ -507,6 +523,10 @@ fn main () -> io::Result<()> {
 
             gl::UniformMatrix4fv(
                 1, 1, gl::FALSE, model_mat.as_ptr()
+            );
+
+            gl::UniformMatrix4fv(
+                2, 1, gl::FALSE, (view * model).to_homogeneous().as_ptr(),
             );
 
             gl::Uniform1f(6, time.as_millis() as f32 / 1000.0);
