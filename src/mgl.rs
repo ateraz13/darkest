@@ -1,54 +1,112 @@
 
+// MODULE: Move GL
+// This modules is designed to prepare data for OpenGL use
+
 pub mod attr {
 
     use gl::types::*;
 
-    pub enum AttributeType {
-        Vec2, Vec3, Vec4
-    }
+    pub mod mesh3d {
 
-    pub struct VertexAttributes {
-        pub pos_comp_type: AttributeType,
-        // NOTE: we do not use vector types for attributes because we may want
-        // different number of components for some attributes
-        pub positions: Vec<f32>, // 2 or 3 components per position
-        pub normals: Vec<f32>, // 3 components per normal
-        pub uvs: Vec<f32> // 2 components per uv
-    }
-
-    impl VertexAttributes {
-
-        pub fn position_buffer_size(&self) -> GLsizeiptr {
-            (self.positions.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+        pub enum AttributeType {
+            Vec2, Vec3, Vec4, Float
         }
 
-        pub fn normal_buffer_size(&self) -> GLsizeiptr {
-            (self.normals.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+        impl enum AttributeType {
+            pub fn count(&self) -> GLuint {
+                match self {
+                    Float => 1,
+                    Vec2  => 2,
+                    Vec3  => 3,
+                    Vec4  => 4,
+                }
+            }
+
+            pub fn gl_type(&self) -> GLenum {
+                match self {
+                    Float => gl::FLOAT,
+                    Vec2  => gl::FLOAT,
+                    Vec3  => gl::FLOAT,
+                    Vec4  => gl::FLOAT,
+                }
+            }
         }
 
-        pub fn uv_buffer_size(&self) -> GLsizeiptr {
-            (self.uvs.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+        pub struct VertexAttributes {
+            pub pos_comp_type: AttributeType,
+            // NOTE: we do not use vector types for attributes because we may want
+            // different number of components for some attributes
+            pub positions: Vec<f32>, // 2 or 3 components per position
+            pub normals: Vec<f32>, // 3 components per normal
+            pub uvs: Vec<f32> // 2 components per uv
         }
 
-        pub unsafe fn position_buffer_ptr(&self) -> *const GLvoid {
-            self.positions.as_ptr() as *const GLvoid
+
+        pub struct TextureSet {
+
         }
 
-        pub unsafe fn normal_buffer_ptr(&self) -> *const GLvoid {
-            self.normals.as_ptr() as *const GLvoid
+        // If you change this prepare to change GL code
+        type MeshIndex = GLushort;
+
+        pub struct IndexedMesh {
+            pub indices: Vec<MeshIndex>,
+            pub attributes: VertexAttributes,
         }
 
-        pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
-            self.uvs.as_ptr() as *const GLvoid
+        impl VertexAttributes {
+
+            pub fn position_buffer_size(&self) -> GLsizeiptr {
+                (self.positions.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+            }
+
+            pub fn normal_buffer_size(&self) -> GLsizeiptr {
+                (self.normals.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+            }
+
+            pub fn uv_buffer_size(&self) -> GLsizeiptr {
+                (self.uvs.len() * std::mem::size_of::<f32>()) as GLsizeiptr
+            }
+
+            pub unsafe fn position_buffer_ptr(&self) -> *const GLvoid {
+                self.positions.as_ptr() as *const GLvoid
+            }
+
+            pub unsafe fn normal_buffer_ptr(&self) -> *const GLvoid {
+                self.normals.as_ptr() as *const GLvoid
+            }
+
+            pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
+                self.uvs.as_ptr() as * indices exeed the number of positions ?
+            // Probably don't need to worry but also be careful !
+            pub fn new(indices: Vec<MeshIndex>, attrs: VertexAttributes) -> Self {
+                Self {
+                    indices: indices,
+                    attributes: attrs,
+                }
+            }
+
+            pub vertex_count (&self) -> GLuint {
+                self.indices.len() as GLuint
+            }
+
+            pub index_buffer_size() -> GLuint {
+                self.indices.len() * std::mem::size_of(MeshIndex)
+            }
         }
     }
 }
 
 pub mod core {
 
-
-
     use std::ffi::{CString, CStr};
+
+
+    #[derive(Debug)]
+    pub enum ShaderIssue {
+        CompileError(String),
+        LinkError(String),
+    }
 
     pub struct Shader {
         id: gl::types::GLuint,
@@ -73,7 +131,7 @@ pub mod core {
 
         pub fn from_shaders(
             shaders: &[Shader]
-        ) -> Result<Self, String> {
+        ) -> Result<Self, ShaderIssue> {
 
             use gl::types::*;
 
@@ -108,7 +166,7 @@ pub mod core {
                     )
                 }
 
-                return Err(mesg.to_string_lossy().into_owned());
+                return Err(ShaderIssue::LinkError(mesg.to_string_lossy().into_owned()));
             }
 
             return Ok(Self { id: program_id });
@@ -121,7 +179,7 @@ pub mod core {
         pub fn from_source (
             shader_source: &CStr,
             shader_type: gl::types::GLenum
-        ) -> Result<Self, String> {
+        ) -> Result<Self, ShaderIssue> {
 
             use gl::types::*;
 
@@ -153,7 +211,7 @@ pub mod core {
                     );
                 }
 
-                return Err(mesg.to_string_lossy().into_owned());
+                return Err(ShaderIssue::CompileError(mesg.to_string_lossy().into_owned()));
             }
 
             return Ok(Self { id });
