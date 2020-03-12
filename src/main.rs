@@ -77,29 +77,6 @@ fn main () -> io::Result<()> {
         ]
     };
 
-
-    unsafe {
-
-        // FIXME: Upload all the mipmaps to the GPU
-        let upload_s3_texture  = |tex: s3tc::Image, tex_unit: GLenum, tex_id: GLuint| {
-
-            let block_size = tex.block_size as i32;
-            let format = tex.format.gl_format();
-
-
-            gl::ActiveTexture(tex_unit);
-            gl::BindTexture(gl::TEXTURE_2D, tex_id);
-            for (level,m) in tex.mipmap_iter().enumerate()  {
-                gl::CompressedTexImage2D(gl::TEXTURE_2D, level as i32, format, m.width, m.height,
-                                         0, m.data.len() as i32, m.data.as_ptr() as *const GLvoid);
-            }
-            // gl::GenerateMipmap(gl::TEXTURE_2D);
-        };
-
-        upload_s3_texture(diffuse_s3_tex, gl::TEXTURE0, diffuse_texture);
-        upload_s3_texture(specular_s3_tex, gl::TEXTURE1, specular_texture);
-    }
-
     unsafe {
         gl::ClearColor(0.12, 0.0, 0.20, 1.0);
     }

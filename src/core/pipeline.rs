@@ -27,6 +27,8 @@ mod gpu {
         const POSITION : GLuint = 0;
         const NORMAL : GLuint = 1;
         const UV : GLuint = 3;
+        const DIFFUSE_TEXTURE_UNIT : GLuint = gl::TEXTURE0;
+        const SPECULAR_TEXTURE_UNIT : GLuint = gl::TEXTURE1;
     }
 
     #[derive(Default)]
@@ -170,6 +172,8 @@ mod gpu {
 
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
+
+            return m;
         }
 
         impl TexturedMesh {
@@ -178,6 +182,33 @@ mod gpu {
                     mesh: m,
                     textures: t,
                 }
+            }
+        }
+
+        impl From<mgl::attr::LightMaps> for Textures {
+            fn from (lmaps: mgl::attr::LightMaps) -> Textures {
+                let t = Textures::new();
+
+                let upload_s3_texture  = |tex: s3tc::Image, tex_unit: GLenum, tex_id: GLuint| {
+
+                    let block_size = tex.block_size as i32;
+                    let format = tex.format.gl_format();
+
+
+                    gl::ActiveTexture(tex_unit);
+                    gl::BindTexture(gl::TEXTURE_2D, tex_id);
+                    for (level,m) in tex.mipmap_iter().enumerate()  {
+                        gl::CompressedTexImage2D(gl::TEXTURE_2D, level as i32, format, m.width, m.height,
+                                                 0, m.data.len() as i32, m.data.as_ptr() as *const GLvoid);
+                    }
+                    // gl::GenerateMipmap(gl::TEXTURE_2D);
+                };
+
+
+                upload_s3_texture(diffuse_s3_tex, attr_id::DIFFUSE_TEXTURE_UNIT, t.diffuse);
+                upload_s3_texture(specular_s3_tex, attr_id::SPECULAR_TEXTURE_UNIT, t.specular);
+
+                return t;
             }
         }
 

@@ -42,8 +42,9 @@ pub mod attr {
         }
 
 
-        pub struct TextureSet {
-
+        pub struct LightMaps {
+            pub diffuse: s3tc::Image,
+            pub specular: s3tc::Image,
         }
 
         // If you change this prepare to change GL code
@@ -77,7 +78,9 @@ pub mod attr {
             }
 
             pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
-                self.uvs.as_ptr() as * indices exeed the number of positions ?
+                self.uvs.as_ptr() as * *const GLvoid
+            }
+            // What if indices exeed the number of positions ?
             // Probably don't need to worry but also be careful !
             pub fn new(indices: Vec<MeshIndex>, attrs: VertexAttributes) -> Self {
                 Self {
@@ -94,6 +97,7 @@ pub mod attr {
                 self.indices.len() * std::mem::size_of(MeshIndex)
             }
         }
+
     }
 }
 
