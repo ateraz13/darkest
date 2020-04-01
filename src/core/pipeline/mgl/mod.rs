@@ -1,18 +1,22 @@
+pub mod s3tc;
 
 // MODULE: Move GL
-// This modules is designed to prepare data for OpenGL use
+// This modules defines structures which can are used
+// for transforming data stored on the CPU into their OpenGL represantations
 
 pub mod attr {
 
-    use gl::types::*;
-
     pub mod mesh3d {
+
+        use std::convert::TryInto;
+
+        use gl::types::*;
 
         pub enum AttributeType {
             Vec2, Vec3, Vec4, Float
         }
 
-        impl enum AttributeType {
+        impl AttributeType {
             pub fn count(&self) -> GLuint {
                 match self {
                     Float => 1,
@@ -41,10 +45,11 @@ pub mod attr {
             pub uvs: Vec<f32> // 2 components per uv
         }
 
+        pub use crate::s3tc::Image;
 
         pub struct LightMaps {
-            pub diffuse: s3tc::Image,
-            pub specular: s3tc::Image,
+            pub diffuse: Image,
+            pub specular: Image,
         }
 
         // If you change this prepare to change GL code
@@ -54,6 +59,35 @@ pub mod attr {
             pub indices: Vec<MeshIndex>,
             pub attributes: VertexAttributes,
         }
+
+        impl IndexedMesh {
+
+            // What if indices exeed the number of positions ?
+            // Probably don't need to worry but also be careful !
+            pub fn new(indices: Vec<MeshIndex>, attrs: VertexAttributes) -> Self {
+                Self {
+                    indices: indices,
+                    attributes: attrs,
+                }
+            }
+
+            pub fn vertex_count (&self) -> GLuint {
+                self.indices.len() as GLuint
+            }
+
+            pub fn index_buffer_size(&self) -> isize {
+                (self.indices.len() * std::mem::size_of::<MeshIndex>()).try_into().unwrap()
+            }
+
+            pub fn index_buffer_ptr(&self) -> *const GLvoid {
+                self.indices.as_ptr() as *const GLvoid
+            }
+
+            // pub fn index_buffer_size(&self) -> GLuint {
+            //     self.indices.len() * std::mem::size_of::<MeshIndex>()
+            // }
+        }
+
 
         impl VertexAttributes {
 
@@ -78,33 +112,16 @@ pub mod attr {
             }
 
             pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
-                self.uvs.as_ptr() as * *const GLvoid
-            }
-            // What if indices exeed the number of positions ?
-            // Probably don't need to worry but also be careful !
-            pub fn new(indices: Vec<MeshIndex>, attrs: VertexAttributes) -> Self {
-                Self {
-                    indices: indices,
-                    attributes: attrs,
-                }
-            }
-
-            pub vertex_count (&self) -> GLuint {
-                self.indices.len() as GLuint
-            }
-
-            pub index_buffer_size() -> GLuint {
-                self.indices.len() * std::mem::size_of(MeshIndex)
+                self.uvs.as_ptr() as *const GLvoid
             }
         }
 
     }
 }
 
-pub mod core {
+pub mod shaders {
 
     use std::ffi::{CString, CStr};
-
 
     #[derive(Debug)]
     pub enum ShaderIssue {

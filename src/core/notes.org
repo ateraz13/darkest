@@ -1,0 +1,6 @@
+#+TITLE: notes
+
+* Don't forget to write all destruction code for GPU data
+* Resources are loaded from dist by ResourceBank
+* Need to find a good method to avoid dangling IDs
+* How should we manage resources ?

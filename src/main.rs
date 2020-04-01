@@ -2,8 +2,6 @@ extern crate nalgebra as na;
 
 pub mod core;
 pub mod resource;
-pub mod mgl;
-pub mod s3tc;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -14,6 +12,8 @@ use std::fs::File;
 use std::io::BufReader;
 
 use crate::core::pipeline::Pipeline3D;
+use crate::core::pipeline::mgl;
+use crate::core::pipeline::mgl::s3tc;
 
 
 // TODO: Start preparing debug.rs
@@ -34,53 +34,56 @@ fn main () -> io::Result<()> {
 
     let mut app = app::AppCore::init(app_cfg).unwrap();
 
+    let mut p3d = Pipeline3D::create_and_prepare(&app).unwrap();
 
-    let p3d = Pipeline3D::create_and_prepare(&app).unwrap();
+    {
 
-    benchmark!{
-        "Loading diffuse texture";
-        let diffuse_s3_tex = s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(Path::new("assets/diff.dds")).unwrap()).unwrap()
+        let plane  = mgl::attr::mesh3d::IndexedMesh {
+
+            indices:   vec![
+                0, 1, 3, 2, 3, 1
+            ],
+
+            attributes: mgl::attr::mesh3d::VertexAttributes {
+
+                pos_comp_type: mgl::attr::mesh3d::AttributeType::Vec3,
+
+                // 3 components per position
+                positions:  vec![
+                    -1.0, 1.0, -1.0,  // bottom right
+                    -1.0, -1.0, -1.0, // bottom left
+                    1.0, -1.0, -1.0,  // top left
+                    1.0, 1.0, -1.0,   // top right
+                ],
+
+                normals: vec![
+                    0.0, 0.0, 1.0,
+                    0.0, 0.0, 1.0,
+                    0.0, 0.0, 1.0,
+                    0.0, 0.0, 1.0,
+                ],
+
+                uvs: vec! [
+                    1.0, 0.0,
+                    0.0, 0.0,
+                    0.0, 1.0,
+                    1.0, 1.0
+                ]
+            }
+        };
+
+        let light_maps = mgl::attr::mesh3d::LightMaps {
+            diffuse: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(Path::new("assets/diff.dds")).unwrap()).unwrap(),
+            specular: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(Path::new("assets/spec.dds")).unwrap()).unwrap(),
+        };
+
+        p3d.prepare_textured_meshes(&[( &light_maps, &plane )]);
+
     }
-
-    benchmark!{
-        "Loading specular texture";
-        let specular_s3_tex = s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(Path::new( "assets/spec.dds" )).unwrap()).unwrap()
-    }
-
-    let indices: Vec<u16> =  vec![
-        0, 1, 3, 2, 3, 1
-    ];
-
-
-    let vert_attrs = mgl::attr::VertexAttributes {
-
-        pos_comp_type: mgl::attr::AttributeType::Vec3,
-
-        // 3 components per position
-        positions:  vec![
-            -1.0, 1.0, -0.5,  // bottom right
-            -1.0, -1.0, -0.5, // bottom left
-            1.0, -1.0, -0.5,  // top left
-            1.0, 1.0, -0.5,   // top right
-        ],
-        normals: vec![
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-        ],
-        uvs: vec! [
-            1.0, 0.0,
-            0.0, 0.0,
-            0.0, 1.0,
-            1.0, 1.0
-        ]
-    };
 
     unsafe {
         gl::ClearColor(0.12, 0.0, 0.20, 1.0);
     }
-
 
     let timer = std::time::Instant::now();
 
@@ -189,42 +192,20 @@ fn main () -> io::Result<()> {
         unsafe {
 
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            gl::BindVertexArray(vao);
+            // gl::BindVertexArray(self.vao);
 
             gl::Uniform1i(7, 0); // Texture Unit 0 : DIFFUSE
-            gl::Uniform1i(8, 1); // Texture Unit 0 : SPECULAR
+            gl::Uniform1i(8, 1); // Texture Unit 1 : SPECULAR
 
-            gl::UniformMatrix4fv(5, 1, gl::FALSE, normal_mat.as_ptr());
+            // gl::UniformMatrix4fv(5, 1, gl::FALSE, normal_mat.as_ptr());
+            // gl::Uniform1f(6, time.as_millis() as f32 / 1000.0);
 
-            gl::UniformMatrix4fv(
-                4, 1, gl::FALSE, mvp.as_ptr()
-            );
-
-            gl::UniformMatrix4fv(
-                3, 1, gl::FALSE, proj_mat.as_ptr()
-            );
-
-            gl::UniformMatrix4fv(
-                1, 1, gl::FALSE, model_mat.as_ptr()
-            );
-
-            gl::UniformMatrix4fv(
-                2, 1, gl::FALSE, (view * model).to_homogeneous().as_ptr(),
-            );
-
-            gl::Uniform1f(6, time.as_millis() as f32 / 1000.0);
-
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
-            gl::DrawElements(
-                gl::TRIANGLES,
-                6,
-                gl::UNSIGNED_SHORT,
-                0 as *const GLvoid
-            )
+            p3d.update_projection_matrix(proj_mat.clone());
+            p3d.update_view_matrix(view.to_homogeneous());
+            p3d.draw_textured_meshes();
         }
 
         app.sdl_window.gl_swap_window();
-
         // Limit the framerate to 60 FPS
         let time_end = timer.elapsed();
         let frame_duration = time_end - time;

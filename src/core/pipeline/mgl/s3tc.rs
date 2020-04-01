@@ -1,31 +1,29 @@
-pub enum Format {
+pub enum S3TC_Format {
     DXT1,
     DXT3,
     DXT5,
 }
 
-impl Format {
+impl S3TC_Format {
 
     pub fn gl_format(&self) -> u32 {
         match self {
-            Format::DXT1 => gl::COMPRESSED_RGB_S3TC_DXT1_EXT,
-            Format::DXT3 => gl::COMPRESSED_RGBA_S3TC_DXT3_EXT,
-            Format::DXT5 => gl::COMPRESSED_RGBA_S3TC_DXT5_EXT,
+            DXT1 => gl::COMPRESSED_RGB_S3TC_DXT1_EXT,
+            DXT3 => gl::COMPRESSED_RGBA_S3TC_DXT3_EXT,
+            DXT5 => gl::COMPRESSED_RGBA_S3TC_DXT5_EXT,
         }
     }
 
 }
 
-pub struct MipmapDesc {
-    offset: usize,
-    size: usize,
-    width: i32,
-    height: i32,
+pub struct S3MipmapDesc {
+    pub offset: usize,
+    pub size: usize,
+    pub width: i32,
+    pub height: i32,
 }
 
-// FIXME : Create accessors methods for public struct fields
-
-pub struct MipmapView<'a> {
+pub struct S3MipmapView<'a> {
     pub width: i32,
     pub height: i32,
     pub data: &'a [u8],
@@ -35,20 +33,20 @@ pub struct Image {
     pub width: i32,
     pub height: i32,
     pub linear_size: i32,
-    pub format: Format,
+    pub format: S3TC_Format,
     pub block_size: u32,
     pub data: Vec<u8>,
-    pub mipmaps: Vec<MipmapDesc>,
+    pub mipmaps: Vec<S3MipmapDesc>,
 }
 
-pub type MipmapDescIter<'a> = std::slice::Iter<'a, MipmapDesc>;
+pub type MipmapDescIter<'a> = std::slice::Iter<'a, S3MipmapDesc>;
 
-pub struct MipmapIter<'a> {
-    data: &'a Vec<u8>,
-    desc_iter: MipmapDescIter<'a>
+pub struct S3MipmapIter<'a> {
+    pub data: &'a Vec<u8>,
+    pub desc_iter: MipmapDescIter<'a>
 }
 
-impl<'a> MipmapIter<'a> {
+impl<'a> S3MipmapIter<'a> {
 
     pub fn new(data: &'a Vec<u8>, desc_iter: MipmapDescIter<'a>) -> Self {
         Self  {
@@ -59,13 +57,13 @@ impl<'a> MipmapIter<'a> {
 
 }
 
-impl<'a> Iterator for MipmapIter<'a> {
-    type Item = MipmapView<'a>;
+impl<'a> Iterator for S3MipmapIter<'a> {
+    type Item = S3MipmapView<'a>;
 
-    fn next(&mut self) -> Option<MipmapView<'a>> {
+    fn next(&mut self) -> Option<S3MipmapView<'a>> {
 
         match self.desc_iter.next() {
-            Some(d) => Some(MipmapView {
+            Some(d) => Some(S3MipmapView {
                 width: d.width,
                 height: d.height,
                 data: &self.data[d.offset .. d.offset+d.size]
@@ -77,14 +75,14 @@ impl<'a> Iterator for MipmapIter<'a> {
 }
 
 #[derive(Debug)]
-pub enum Error {
+pub enum ImageError {
     UnsupportedCompression,
     InvalidData(String),
 }
 
 impl Image {
 
-    pub fn from_dds_buffer(mut header: Vec<u8>) -> Result<Image, Error> {
+    pub fn from_dds_buffer(mut header: Vec<u8>) -> Result<Image, ImageError> {
 
         macro_rules! get_u32 {
             ($buffer:ident, $idx:expr) => {
@@ -103,7 +101,7 @@ impl Image {
 
         let ident = String::from_utf8(header[0..3].to_vec()).unwrap();
         if ident.as_str() != "DDS" {
-            return Err(Error::InvalidData("DDS Ident does not much!".to_owned()));
+            return Err(ImageError::InvalidData("DDS Ident does not much!".to_owned()));
         }
 
         let buffer = header.drain(128..).collect();
@@ -119,9 +117,9 @@ impl Image {
         println!("DXT mipmap count: {}", mipmap_count);
 
         let (format, block_size) = match four_cc.as_str() {
-            "DXT1" => ( Format::DXT1,  8 ),
-            "DXT2" => ( Format::DXT3, 16 ),
-            "DXT5" => ( Format::DXT5, 16 ),
+            "DXT1" => ( S3TC_Format::DXT1,  8 ),
+            "DXT2" => ( S3TC_Format::DXT3, 16 ),
+            "DXT5" => ( S3TC_Format::DXT5, 16 ),
             _ => panic!(format!("Unsupported DXT format! ({})", four_cc))
         };
 
@@ -135,7 +133,7 @@ impl Image {
             let mip_size = (((mip_w+3)/4)*((mip_h+3)/4)*block_size) as usize;
 
             mipmaps.push(
-                MipmapDesc {
+                S3MipmapDesc {
                     offset: mip_offset,
                     size: mip_size,
                     width: mip_w as i32,
@@ -159,4 +157,7 @@ impl Image {
         })
     }
 
-    pub fn mipmap_iter(&self) ->  MipmapIter
+    pub fn mipmap_iter(&self) ->  S3MipmapIter {
+        S3MipmapIter::new(&self.data, self.mipmaps.iter())
+    }
+}
