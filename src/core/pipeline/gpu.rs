@@ -15,7 +15,7 @@ pub mod attrs {
 
     pub const POSITION_LOCATION : IdVal = 0;
     pub const NORMAL_LOCATION : IdVal = 1;
-    pub const UV_LOCATION : IdVal = 3;
+    pub const UV_LOCATION : IdVal = 2;
     pub const DIFFUSE_TEXTURE_UNIT : IdVal = gl::TEXTURE0;
     pub const DIFFUSE_SAMPLER_LOCATION : IdVal = 7;
     pub const SPECULAR_TEXTURE_UNIT : IdVal = gl::TEXTURE1;
@@ -130,17 +130,16 @@ impl From<&mesh3d::IndexedMesh> for Mesh {
 
             gl::BindBuffer(gl::ARRAY_BUFFER, 0); // unbind
 
-            let mut vao: IdVal = 0;
-            gl::GenVertexArrays(1, &mut vao);
+            gl::GenVertexArrays(1, &mut m.vao);
 
-            gl::BindVertexArray(vao);
+            gl::BindVertexArray(m.vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, m.buffers.position);
             gl::EnableVertexAttribArray(attrs::POSITION_LOCATION);
 
             gl::VertexAttribPointer (
                 attrs::POSITION_LOCATION,
-                data.attributes.pos_comp_type.count() as i32,
-                data.attributes.pos_comp_type.gl_type(),
+                3,// data.attributes.pos_comp_type.count() as i32,
+                gl::FLOAT,// data.attributes.pos_comp_type.gl_type(),
                 gl::FALSE,
                 0, // tightly-packed
                 std::ptr::null()
@@ -153,7 +152,7 @@ impl From<&mesh3d::IndexedMesh> for Mesh {
                 attrs::NORMAL_LOCATION,
                 3,
                 gl::FLOAT,
-                gl::TRUE,
+                gl::FALSE,
                 0,
                 std::ptr::null()
             );
@@ -171,6 +170,7 @@ impl From<&mesh3d::IndexedMesh> for Mesh {
             );
 
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
             gl::BindVertexArray(0);
 
         }

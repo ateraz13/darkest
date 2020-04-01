@@ -36,11 +36,13 @@ type Mat4 = na::Matrix4<f32>;
 #[derive(Debug)]
 pub struct TexMeshData {
     pub resource: gpu::TexturedMesh,
-    pub transform: Mat4,
+    pub model_matrix: Mat4,
+    pub normal_matrix: Mat4,
 }
 
 pub struct Pipeline3D {
     render: Render3D,
+    projection_matrix: Mat4,
     view_matrix: Mat4,
     tex_meshes: Vec<TexMeshData>,
 }
@@ -69,13 +71,19 @@ fn configure_texture_parameters () {
 impl Pipeline3D {
 
     pub fn create_and_prepare (app: &app::AppCore) -> Result<Self, InitError> {
-        Ok( Self {
+        let p3d =  Self {
             render: Render3D {
                 main_shader: Self::load_and_compile_shaders(app)?
             },
+            projection_matrix: Mat4::identity(),
             view_matrix: Mat4::identity(),
             tex_meshes: vec![],
-        })
+        };
+
+        p3d.configure_gl_parameters();
+        p3d.prepare_viewport();
+
+        Ok(p3d)
     }
 
     pub fn activate_shader(&self) {
@@ -103,7 +111,8 @@ impl Pipeline3D {
                                              gpu::Textures::from(*lm));
             self.tex_meshes.push(TexMeshData{
                 resource: tm,
-                transform: Mat4::identity()
+                model_matrix: Mat4::identity(),
+                normal_matrix: Mat4::identity()
             });
         }
     }
@@ -124,27 +133,40 @@ impl Pipeline3D {
     }
 
     pub fn update_model_matrix(&mut self, id: u32, mat: Mat4) {
-        self.tex_meshes[id as usize].transform = mat
+        self.tex_meshes[id as usize].model_matrix = mat
+    }
+
+    pub fn update_normal_matrix(&mut self, id: u32, mat: Mat4) {
+        self.tex_meshes[id as usize].normal_matrix = mat
     }
 
     // There may be problems with multiplying the view and model matrices
     pub fn update_view_matrix(&mut self, mat: Mat4) {
         self.view_matrix = mat;
-        unsafe {
-            // gl::UniformMatrix4fv(4, 1, gl::FALSE, mat.as_ptr())
-        }
+        // unsafe {
+        //     gl::UniformMatrix4fv(4, 1, gl::FALSE, mat.as_ptr())
+        // }
     }
 
     pub fn update_projection_matrix(&mut self, mat: Mat4) {
-        unsafe {
-            // gl::UniformMatrix4fv(4, 1, gl::FALSE, mat.as_ptr())
-        }
+        self.projection_matrix = mat;
+        // unsafe {
+        //     gl::UniformMatrix4fv(4, 1, gl::FALSE, mat.as_ptr())
+        // }
     }
 
     pub fn draw_textured_meshes(&self) {
         for m in self.tex_meshes.iter() {
             unsafe {
-                // gl::UniformMatrix4fv(2, 1, gl::FALSE, (self.view_matrix*m.transform).as_ptr());
+                let mv = self.view_matrix*m.model_matrix;
+                let mvp = self.projection_matrix * mv;
+
+                gl::UniformMatrix4fv(1, 1, gl::FALSE, m.model_matrix.as_ptr());
+                gl::UniformMatrix4fv(2, 1, gl::FALSE, mv.as_ptr());
+                gl::UniformMatrix4fv(3, 1, gl::FALSE, self.projection_matrix.as_ptr());
+                gl::UniformMatrix4fv(4, 1, gl::FALSE, mvp.as_ptr());
+                gl::UniformMatrix4fv(5, 1, gl::FALSE, m.normal_matrix.as_ptr());
+
                 self.render.main_shader.set_active();
             }
 
@@ -164,6 +186,11 @@ impl Draw<gpu::TexturedMesh> for Render3D {
     fn draw(&self, e: &gpu::TexturedMesh) {
 
         unsafe {
+
+            gl::ActiveTexture(gpu::attrs::DIFFUSE_TEXTURE_UNIT);
+            gl::BindTexture(gl::TEXTURE_2D, e.textures.diffuse);
+            gl::ActiveTexture(gpu::attrs::SPECULAR_TEXTURE_UNIT);
+            gl::BindTexture(gl::TEXTURE_2D, e.textures.specular);
 
             gl::BindVertexArray(e.mesh.vao);
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, e.mesh.buffers.indices);

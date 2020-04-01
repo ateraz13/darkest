@@ -72,12 +72,16 @@ fn main () -> io::Result<()> {
             }
         };
 
+        p3d.activate_shader();
+
         let light_maps = mgl::attr::mesh3d::LightMaps {
             diffuse: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(Path::new("assets/diff.dds")).unwrap()).unwrap(),
             specular: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(Path::new("assets/spec.dds")).unwrap()).unwrap(),
         };
 
-        p3d.prepare_textured_meshes(&[( &light_maps, &plane )]);
+        p3d.prepare_textured_meshes(&[
+            ( &light_maps, &plane )
+        ]);
 
     }
 
@@ -169,7 +173,7 @@ fn main () -> io::Result<()> {
         }
 
         // Enable shader
-        p3d.activate_shader();
+        // p3d.activate_shader();
 
         if camera_rotate_active {
             model_rotation.x += mouse_motion.y;
@@ -177,12 +181,12 @@ fn main () -> io::Result<()> {
         }
 
         let model =  na::Isometry3::<f32>::new(
-            na::Vector3::new(0.0,0.0,0.0), // translation
+            na::Vector3::new(0.0,0.0,-3.0), // translation
             // na::Vector3::new(0.0(time.as_millis() as f32 * 0.0005).sin()-3.14/5.0, 0.0) // rotation
             model_rotation
         );
 
-        let model_mat  = model.to_homogeneous(); //na::Matrix4::<f32>::from( rotation );
+        let model_mat  = model.to_homogeneous();
         let model_view = view * model;
         let normal_mat = model_view.inverse().to_homogeneous().transpose();
         let proj_mat  = projection.as_matrix();
@@ -190,18 +194,16 @@ fn main () -> io::Result<()> {
 
         // Drawing code
         unsafe {
-
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            // gl::BindVertexArray(self.vao);
 
             gl::Uniform1i(7, 0); // Texture Unit 0 : DIFFUSE
             gl::Uniform1i(8, 1); // Texture Unit 1 : SPECULAR
 
-            // gl::UniformMatrix4fv(5, 1, gl::FALSE, normal_mat.as_ptr());
-            // gl::Uniform1f(6, time.as_millis() as f32 / 1000.0);
-
             p3d.update_projection_matrix(proj_mat.clone());
             p3d.update_view_matrix(view.to_homogeneous());
+            p3d.update_model_matrix(0, model_mat);
+            p3d.update_normal_matrix(0, normal_mat);
+
             p3d.draw_textured_meshes();
         }
 

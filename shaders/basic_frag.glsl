@@ -68,5 +68,6 @@ void main () {
   vec3 specular = specular_scalar * sun.specular * texture(specular_texture, frag_uv).rgb / sun_dist2 * specular_intensity;
   vec3 ambient = sun.ambient * texture(diffuse_texture, frag_uv).rgb;
 
+  // frag_color = vec4(1.0, 0.0, 0.0, 1.0);
   frag_color = vec4((ambient + diffuse + specular), 1.0);
 }

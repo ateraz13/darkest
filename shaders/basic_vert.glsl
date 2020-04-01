@@ -27,4 +27,5 @@ void main() {
   vec4 p4 = modelview_mat * vec4(position, 1.0);
   frag_position = position.xyz / p4.w;
   gl_Position =  mvp * vec4(position, 1.0);
+  // gl_Position =  vec4(position, 1.0);
 }

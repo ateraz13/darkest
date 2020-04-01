@@ -12,6 +12,7 @@ pub mod attr {
 
         use gl::types::*;
 
+        #[derive(Debug)]
         pub enum AttributeType {
             Vec2, Vec3, Vec4, Float
         }
@@ -36,6 +37,7 @@ pub mod attr {
             }
         }
 
+        #[derive(Debug)]
         pub struct VertexAttributes {
             pub pos_comp_type: AttributeType,
             // NOTE: we do not use vector types for attributes because we may want
@@ -55,6 +57,7 @@ pub mod attr {
         // If you change this prepare to change GL code
         type MeshIndex = GLushort;
 
+        #[derive(Debug)]
         pub struct IndexedMesh {
             pub indices: Vec<MeshIndex>,
             pub attributes: VertexAttributes,
@@ -75,7 +78,7 @@ pub mod attr {
                 self.indices.len() as GLuint
             }
 
-            pub fn index_buffer_size(&self) -> isize {
+            pub fn index_buffer_size(&self) -> GLsizeiptr {
                 (self.indices.len() * std::mem::size_of::<MeshIndex>()).try_into().unwrap()
             }
 
