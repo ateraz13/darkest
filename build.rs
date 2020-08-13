@@ -1,8 +1,6 @@
 use std::env;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{PathBuf};
 
-#[cfg(any(windows))]
 fn sdl_setup () {
     let target = env::var("TARGET").unwrap();
     if target.contains("pc-windows") {
@@ -44,11 +42,6 @@ fn sdl_setup () {
         }
     }
 }
-
-#[cfg(any(unix))]
-fn sdl_setup () {
-}
-
 
 // #[cfg(any(unix))]
 // fn prepare_asset_dir () -> std::io::Result<()> {
