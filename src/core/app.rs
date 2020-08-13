@@ -64,7 +64,7 @@ impl AppCore {
 
         let buf_loader = unwrap_or_fail!(
             resource::BufferLoader::relative_to_exe(),
-            |e| InitError::BufferLoader(format!("Buffer loader failed init: {}", e))
+            |e| InitError::BufferLoader(format!("Buffer loader failed init: {:?}", e))
         );
 
         Ok ( Self {

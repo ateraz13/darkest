@@ -1,16 +1,16 @@
-pub enum S3TC_Format {
+pub enum Format {
     DXT1,
     DXT3,
     DXT5,
 }
 
-impl S3TC_Format {
+impl Format {
 
     pub fn gl_format(&self) -> u32 {
         match self {
-            DXT1 => gl::COMPRESSED_RGB_S3TC_DXT1_EXT,
-            DXT3 => gl::COMPRESSED_RGBA_S3TC_DXT3_EXT,
-            DXT5 => gl::COMPRESSED_RGBA_S3TC_DXT5_EXT,
+            Self::DXT1 => gl::COMPRESSED_RGB_S3TC_DXT1_EXT,
+            Self::DXT3 => gl::COMPRESSED_RGBA_S3TC_DXT3_EXT,
+            Self::DXT5 => gl::COMPRESSED_RGBA_S3TC_DXT5_EXT,
         }
     }
 
@@ -33,7 +33,7 @@ pub struct Image {
     pub width: i32,
     pub height: i32,
     pub linear_size: i32,
-    pub format: S3TC_Format,
+    pub format: Format,
     pub block_size: u32,
     pub data: Vec<u8>,
     pub mipmaps: Vec<S3MipmapDesc>,
@@ -117,9 +117,9 @@ impl Image {
         println!("DXT mipmap count: {}", mipmap_count);
 
         let (format, block_size) = match four_cc.as_str() {
-            "DXT1" => ( S3TC_Format::DXT1,  8 ),
-            "DXT2" => ( S3TC_Format::DXT3, 16 ),
-            "DXT5" => ( S3TC_Format::DXT5, 16 ),
+            "DXT1" => ( Format::DXT1,  8 ),
+            "DXT2" => ( Format::DXT3, 16 ),
+            "DXT5" => ( Format::DXT5, 16 ),
             _ => panic!(format!("Unsupported DXT format! ({})", four_cc))
         };
 

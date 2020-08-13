@@ -1,15 +1,13 @@
 pub mod mgl;
 pub mod gpu;
 
-#[macro_use]
-use crate::core;
-
-use mgl::shaders::ShaderProgram;
+use mgl::shader::ShaderProgram;
 use crate::core::app;
-use crate::core::macros;
+// use crate::core::macros;
 use std::io;
 use std::path::Path;
 use std::convert::From;
+use crate::resource::BufferLoaderError;
 use gl::types::*;
 
 
@@ -22,14 +20,6 @@ use gl::types::*;
 pub struct Render3D {
     main_shader: ShaderProgram,
 }
-
-// pub trait RenderTarget {
-    // Render to viewport
-    // Render to Texture
-    // etc.
-// }
-//
-//
 
 type Mat4 = na::Matrix4<f32>;
 
@@ -49,13 +39,12 @@ pub struct Pipeline3D {
 
 #[derive(Debug)]
 pub enum InitError {
-    ShaderCompileError(String),
-    FailedLoadingResource(io::Error),
-    ShaderIssue(mgl::shaders::ShaderIssue)
+    FailedLoadingResource(BufferLoaderError),
+    ShaderIssue(mgl::shader::ShaderIssue)
 }
 
-impl_error_conv!(io::Error, InitError, FailedLoadingResource);
-impl_error_conv!(mgl::shaders::ShaderIssue, InitError, ShaderIssue);
+impl_error_conv!(BufferLoaderError, InitError, FailedLoadingResource);
+impl_error_conv!(mgl::shader::ShaderIssue, InitError, ShaderIssue);
 
 fn configure_texture_parameters () {
     unsafe {
@@ -73,7 +62,7 @@ impl Pipeline3D {
     pub fn create_and_prepare (app: &app::AppCore) -> Result<Self, InitError> {
         let p3d =  Self {
             render: Render3D {
-                main_shader: Self::load_and_compile_shaders(app)?
+                main_shader: Self::load_and_compile_shader(app)?
             },
             projection_matrix: Mat4::identity(),
             view_matrix: Mat4::identity(),
@@ -117,19 +106,19 @@ impl Pipeline3D {
         }
     }
 
-    fn load_and_compile_shaders(app: &app::AppCore) -> Result<ShaderProgram, InitError> {
+    fn load_and_compile_shader(app: &app::AppCore) -> Result<ShaderProgram, InitError> {
 
-        let vert_shader = mgl::shaders::Shader::from_source (
+        let vert_shader = mgl::shader::Shader::from_source (
             &app.buffer_loader.load_cstring(Path::new("shaders/basic_vert.glsl"))?,
             gl::VERTEX_SHADER
         )?;
 
-        let frag_shader = mgl::shaders::Shader::from_source (
+        let frag_shader = mgl::shader::Shader::from_source (
             &app.buffer_loader.load_cstring(Path::new("shaders/basic_frag.glsl"))?,
             gl::FRAGMENT_SHADER
         )?;
 
-        Ok(mgl::shaders::ShaderProgram::from_shaders(&[vert_shader, frag_shader])?)
+        Ok(mgl::shader::ShaderProgram::from_shaders(&[vert_shader, frag_shader])?)
     }
 
     pub fn update_model_matrix(&mut self, id: u32, mat: Mat4) {

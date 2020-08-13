@@ -7,9 +7,6 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::path::Path;
 use std::io;
-use gl::types::*;
-use std::fs::File;
-use std::io::BufReader;
 
 use crate::core::pipeline::Pipeline3D;
 use crate::core::pipeline::mgl;
@@ -34,7 +31,20 @@ fn main () -> io::Result<()> {
 
     let mut app = app::AppCore::init(app_cfg).unwrap();
 
-    let mut p3d = Pipeline3D::create_and_prepare(&app).unwrap();
+    use crate::core::pipeline::InitError;
+    let mut p3d = Pipeline3D::create_and_prepare(&app).map_err(|e| {
+        match e {
+            InitError::FailedLoadingResource(resource::BufferLoaderError::IoError { file_path, io_error })
+                if io_error.kind() == io::ErrorKind::NotFound => {
+                    panic!(format!("Resource not found needed for core pipeline: {:?}",
+                                   file_path.map_or("Path not specified by error".to_owned(), |a| a.display().to_string())))
+                },
+            InitError::ShaderIssue(issue) => {
+                panic!(format!("Core shader issue: {}", issue))
+            }
+            _ => {}
+        }
+    }).unwrap();
 
     {
 
@@ -46,7 +56,7 @@ fn main () -> io::Result<()> {
 
             attributes: mgl::attr::mesh3d::VertexAttributes {
 
-                pos_comp_type: mgl::attr::mesh3d::AttributeType::Vec3,
+                pos_comp_type: mgl::attr::AttributeType::Vec3,
 
                 // 3 components per position
                 positions:  vec![
@@ -102,14 +112,11 @@ fn main () -> io::Result<()> {
         // na::Isometry3::from_parts(trans, rot)
     };
 
-    let Vec2 = |x,y| na::Vector2::new(x,y);
-    let Vec3 = |x,y,z| na::Vector3::new(x,y,z);
-
     let projection = na::Perspective3::new(4.0 / 3.0, 3.14 / 2.0, 1.0, 1000.0);
 
-    let mut mouse_motion = Vec2(0.0f32, 0.0f32);
+    let mut mouse_motion;
     let mut camera_rotate_active = false;
-    let mut model_rotation = Vec3(0.0f32, 0.0f32, 0.0f32);
+    let mut model_rotation = na::Vector3::new(0.0f32, 0.0f32, 0.0f32);
     let mut enable_blinn = false;
 
     'main_loop: loop {
@@ -127,7 +134,7 @@ fn main () -> io::Result<()> {
                         match k {
                             Keycode::Escape => {break 'main_loop;},
                             Keycode::R => {
-                                model_rotation = Vec3(0.0f32, 0.0, 0.0);
+                                model_rotation = na::Vector3::new(0.0f32, 0.0, 0.0);
                             },
                             Keycode::B => {
                                 if enable_blinn {
@@ -145,7 +152,7 @@ fn main () -> io::Result<()> {
                 }
 
 
-                Event::MouseMotion { mousestate, x, y, xrel, yrel, .. } => {
+                Event::MouseMotion { mousestate : _mstate, x, y, xrel, yrel, .. } => {
                     mouse_motion = na::Vector2::new(xrel as f32 / 800.0 * 3.14,
                                                     yrel as f32 / 600.0 * 3.14);
                 },
