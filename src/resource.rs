@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::Read;
 use std::string::String;
 use std::ffi::CString;
-use std::convert::Into;
 use std::ffi::{ OsString, OsStr };
 
 pub struct BufferLoader {

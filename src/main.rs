@@ -25,7 +25,7 @@ fn main () -> io::Result<()> {
     pub use crate::core::app;
 
     let app_cfg = app::AppConfig {
-        window_size: (800, 600),
+        window_size: (1024, 768),
         window_title: ("darkest v0.1.0".to_owned())
     };
 
@@ -36,7 +36,7 @@ fn main () -> io::Result<()> {
         match e {
             InitError::FailedLoadingResource(resource::BufferLoaderError::IoError { file_path, io_error })
                 if io_error.kind() == io::ErrorKind::NotFound => {
-                    panic!(format!("Resource not found needed for core pipeline: {:?}",
+                    panic!(format!("Resource not found required by core pipeline: {:?}",
                                    file_path.map_or("Path not specified by error".to_owned(), |a| a.display().to_string())))
                 },
             InitError::ShaderIssue(issue) => {
@@ -152,7 +152,7 @@ fn main () -> io::Result<()> {
                 }
 
 
-                Event::MouseMotion { mousestate : _mstate, x, y, xrel, yrel, .. } => {
+                Event::MouseMotion { mousestate : _mstate, x : _x, y : _y, xrel, yrel, .. } => {
                     mouse_motion = na::Vector2::new(xrel as f32 / 800.0 * 3.14,
                                                     yrel as f32 / 600.0 * 3.14);
                 },

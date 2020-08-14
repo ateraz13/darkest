@@ -4,7 +4,6 @@ pub mod gpu;
 use mgl::shader::ShaderProgram;
 use crate::core::app;
 // use crate::core::macros;
-use std::io;
 use std::path::Path;
 use std::convert::From;
 use crate::resource::BufferLoaderError;
@@ -85,7 +84,7 @@ impl Pipeline3D {
 
     fn prepare_viewport(&self) {
         unsafe {
-            gl::Viewport(0, 0, 800, 600);
+            gl::Viewport(0, 0, 1024, 768);
             gl::Enable(gl::DEPTH_TEST);
         }
     }
@@ -158,8 +157,6 @@ impl Pipeline3D {
 
                 self.render.main_shader.set_active();
             }
-
-            // println!("DRAWING: {:?}", m);
 
             self.render.draw(&m.resource);
         }
