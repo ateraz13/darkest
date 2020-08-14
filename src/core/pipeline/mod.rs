@@ -1,14 +1,15 @@
 pub mod mgl;
 pub mod gpu;
 
-use mgl::shader::ShaderProgram;
+
+use crate::resource::BufferLoaderError;
 use crate::core::app;
+use crate::core::pipeline::mgl::shader::ShaderProgram;
 // use crate::core::macros;
 use std::path::Path;
 use std::convert::From;
-use crate::resource::BufferLoaderError;
 use gl::types::*;
-
+use cgmath::prelude::{ Matrix, SquareMatrix };
 
 // TODO: To optimise the pipeline we should catergorise
 // resources into specific groups based on their quality and type.
@@ -20,7 +21,7 @@ pub struct Render3D {
     main_shader: ShaderProgram,
 }
 
-type Mat4 = na::Matrix4<f32>;
+type Mat4 = cgmath::Matrix4<f32>;
 
 #[derive(Debug)]
 pub struct TexMeshData {

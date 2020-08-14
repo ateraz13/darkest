@@ -1,4 +1,4 @@
-extern crate nalgebra as na;
+extern crate cgmath;
 
 mod core;
 mod resource;
@@ -12,6 +12,8 @@ use std::io;
 use crate::core::pipeline::Pipeline3D;
 use crate::core::pipeline::mgl;
 use crate::core::pipeline::mgl::s3tc;
+
+use cgmath::prelude::SquareMatrix;
 
 
 // TODO: Start preparing debug.rs
@@ -69,29 +71,12 @@ fn main () -> io::Result<()> {
 
     let timer = std::time::Instant::now();
 
-    let view = {
-
-        let eye_pos = na::Point3::new(0.0, 0.0, 3.0);
-        let target = na::Point3::new(0.0, 0.0, 0.0);
-        na::Isometry3::look_at_rh(&eye_pos, &target, &na::Vector3::y())
-
-        // let trans = na::Translation3::new(0.0, 0.0, 0.0);
-        // let rot = na::UnitQuaternion::from_scaled_axis(na::Vector3::y() * std::f32::consts::FRAC_PI_2);
-        // na::Isometry3::from_parts(trans, rot)
-    };
-
-    let projection = na::Perspective3::new(4.0 / 3.0, 3.14 / 2.0, 1.0, 1000.0);
-
-    let mut mouse_motion;
-    let mut camera_rotate_active = false;
-    let mut model_rotation = na::Vector3::new(0.0f32, 0.0f32, 0.0f32);
     let mut enable_blinn = false;
 
     'main_loop: loop {
 
         let time = timer.elapsed();
 
-        mouse_motion = na::Vector2::new(0.0f32, 0.0f32);
 
         for event in app.sdl_event_pump.poll_iter() {
 
@@ -102,7 +87,6 @@ fn main () -> io::Result<()> {
                         match k {
                             Keycode::Escape => {break 'main_loop;},
                             Keycode::R => {
-                                model_rotation = na::Vector3::new(0.0f32, 0.0, 0.0);
                             },
                             Keycode::B => {
                                 if enable_blinn {
@@ -116,19 +100,15 @@ fn main () -> io::Result<()> {
                             _ => {},
                         }
                     }
+                },
 
-                }
-
-
-                Event::MouseMotion { mousestate : _mstate, x : _x, y : _y, xrel, yrel, .. } => {
-                    mouse_motion = na::Vector2::new(xrel as f32 / 800.0 * 3.14,
-                                                    yrel as f32 / 600.0 * 3.14);
+                Event::MouseMotion { mousestate : _mstate, x : _x, y : _y, xrel : _xrel, yrel : _yrel, .. } => {
+                   
                 },
 
                 Event::MouseButtonDown {mouse_btn, ..} => {
                     match mouse_btn {
                         sdl2::mouse::MouseButton::Left => {
-                            camera_rotate_active = true;
                         }
                         _ => {}
                     }
@@ -137,8 +117,7 @@ fn main () -> io::Result<()> {
                 Event::MouseButtonUp {mouse_btn, ..} => {
                     match mouse_btn {
                         sdl2::mouse::MouseButton::Left => {
-                            camera_rotate_active = false;
-                        }
+                        },
                         _ => {}
                     }
                 },
@@ -147,25 +126,12 @@ fn main () -> io::Result<()> {
             }
         }
 
-        // Enable shader
-        // p3d.activate_shader();
-
-        if camera_rotate_active {
-            model_rotation.x += mouse_motion.y;
-            model_rotation.y += mouse_motion.x;
-        }
-
-        let model =  na::Isometry3::<f32>::new(
-            na::Vector3::new(0.0,0.0,-3.0), // translation
-            // na::Vector3::new(0.0(time.as_millis() as f32 * 0.0005).sin()-3.14/5.0, 0.0) // rotation
-            model_rotation
-        );
-
-        let model_mat  = model.to_homogeneous();
-        let model_view = view * model;
-        let normal_mat = model_view.inverse().to_homogeneous().transpose();
-        let proj_mat  = projection.as_matrix();
-        let mvp = projection.into_inner() * model_view.to_homogeneous();
+        let model_mat  = cgmath::Matrix4::<f32>::identity();
+        let view_mat = cgmath::Matrix4::<f32>::identity();
+        let normal_mat =  cgmath::Matrix4::<f32>::identity();
+        let proj_mat  = cgmath::Matrix4::<f32>::identity();
+        let model_view_mat = view_mat * model_mat;
+        let mvp = proj_mat * view_mat * model_mat;
 
         // Drawing code
         unsafe {
@@ -173,14 +139,14 @@ fn main () -> io::Result<()> {
 
             gl::Uniform1i(7, 0); // Texture Unit 0 : DIFFUSE
             gl::Uniform1i(8, 1); // Texture Unit 1 : SPECULAR
+        }
 
             p3d.update_projection_matrix(proj_mat.clone());
-            p3d.update_view_matrix(view.to_homogeneous());
+            p3d.update_view_matrix(view_mat.clone());
             p3d.update_model_matrix(0, model_mat);
             p3d.update_normal_matrix(0, normal_mat);
 
             p3d.draw_textured_meshes();
-        }
 
         app.sdl_window.gl_swap_window();
         // Limit the framerate to 60 FPS
