@@ -9,14 +9,32 @@ pub struct VertexAttributes {
     // different number of components for some attributes
     pub positions: Vec<f32>, // 2 or 3 components per position
     pub normals: Vec<f32>, // 3 components per normal
-    pub uvs: Vec<f32> // 2 components per uv
+    pub uvs: Vec<f32>, // 2 components per uv
+    pub tangents: Vec<f32>, // 3 components per tangent
+    pub bitangents: Vec<f32>, //
 }
 
-pub use crate::s3tc::Image;
 
-pub struct LightMaps {
-    pub diffuse: Image,
-    pub specular: Image,
+pub mod lightmaps {
+
+    pub use crate::s3tc::Image;
+
+    pub enum LightMaps {
+        Basic(Basic),
+        NormalMapped(NormalMapped),
+    }
+
+    pub struct Basic {
+        pub diffuse: Image,
+        pub specular: Image,
+    }
+
+    pub struct NormalMapped {
+        pub diffuse: Image,
+        pub specular: Image,
+        pub normal: Image,
+    }
+
 }
 
 // If you change this prepare to change GL code

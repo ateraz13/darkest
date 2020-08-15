@@ -22,6 +22,7 @@ use cgmath::prelude::{ Matrix, SquareMatrix };
 // On failure OpenGL code could be tested in
 // debbug mode.
 
+
 fn main () -> io::Result<()> {
 
     pub use crate::core::app;
@@ -49,7 +50,6 @@ fn main () -> io::Result<()> {
     }).unwrap();
 
     {
-
         let plane  = helpers::mesh3d::create_plane();
 
         p3d.activate_shader();
@@ -61,7 +61,6 @@ fn main () -> io::Result<()> {
         p3d.prepare_textured_meshes(&[
             ( &light_maps, &plane )
         ]);
-
     }
 
     unsafe {
@@ -102,7 +101,7 @@ fn main () -> io::Result<()> {
                 },
 
                 Event::MouseMotion { mousestate : _mstate, x : _x, y : _y, xrel : _xrel, yrel : _yrel, .. } => {
-                   
+
                 },
 
                 Event::MouseButtonDown {mouse_btn, ..} => {
@@ -148,12 +147,12 @@ fn main () -> io::Result<()> {
             gl::Uniform1i(8, 1); // Texture Unit 1 : SPECULAR
         }
 
-            p3d.update_projection_matrix(proj_mat.clone());
-            p3d.update_view_matrix(view_mat.clone());
-            p3d.update_model_matrix(0, model_mat);
-            p3d.update_normal_matrix(0, normal_mat);
+        p3d.update_projection_matrix(proj_mat.clone());
+        p3d.update_view_matrix(view_mat.clone());
+        p3d.update_model_matrix(0, model_mat);
+        p3d.update_normal_matrix(0, normal_mat);
 
-            p3d.draw_textured_meshes();
+        p3d.draw_textured_meshes();
 
         app.sdl_window.gl_swap_window();
         // Limit the framerate to 60 FPS

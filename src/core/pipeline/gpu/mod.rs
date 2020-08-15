@@ -1,10 +1,10 @@
-use crate::mgl;
-use std::convert::TryInto;
-use mgl::s3tc::Image;
+pub mod textures;
 
+// use std::convert::TryInto;
+// use crate::core::pipeline::mgl::s3tc::Image;
 use gl::types::*;
-
 use std::default::Default;
+use textures::Textures;
 
 pub type IdVal = GLuint;
 
@@ -16,10 +16,15 @@ pub mod attrs {
     pub const POSITION_LOCATION : IdVal = 0;
     pub const NORMAL_LOCATION : IdVal = 1;
     pub const UV_LOCATION : IdVal = 2;
+
     pub const DIFFUSE_TEXTURE_UNIT : IdVal = gl::TEXTURE0;
     pub const DIFFUSE_SAMPLER_LOCATION : IdVal = 7;
+
     pub const SPECULAR_TEXTURE_UNIT : IdVal = gl::TEXTURE1;
     pub const SPECULAR_SAMPLER_LOCATION : IdVal = 8;
+
+    pub const NORMAL_TEXTURE_UNIT : IdVal = gl::TEXTURE2;
+    pub const NORMAL_SAMPLER_LOCATION : IdVal = 9;
 }
 
 #[derive(Default,Debug)]
@@ -32,23 +37,16 @@ pub struct Buffers {
 }
 
 #[derive(Default,Debug)]
-pub struct Textures {
-    // Only id values allowed
-    pub diffuse: IdVal,
-    pub specular: IdVal,
-}
-
-#[derive(Default,Debug)]
 pub struct Mesh {
     pub vao: IdVal,
     pub element_count: GLsizei,
     pub buffers: Buffers,
 }
 
-#[derive(Default,Debug)]
+#[derive(Debug)]
 pub struct TexturedMesh {
     pub mesh: Mesh,
-    pub textures: Textures,
+    pub textures: textures::Textures,
 }
 
 impl Buffers {
@@ -62,16 +60,6 @@ impl Buffers {
     }
 }
 
-impl Textures {
-    pub fn new() -> Self {
-        let mut texs : Textures = Default::default();
-        unsafe {
-            gl::GenBuffers((std::mem::size_of::<Textures>()/std::mem::size_of::<IdVal>()) as GLsizei,
-                           (&mut texs.diffuse) as *mut GLuint);
-        }
-        texs
-    }
-}
 
 
 impl Mesh {
@@ -184,32 +172,5 @@ impl TexturedMesh {
             mesh: m,
             textures: t,
         }
-    }
-}
-
-impl From<&mgl::attr::mesh3d::LightMaps> for Textures {
-    fn from (lmaps: &mgl::attr::mesh3d::LightMaps) -> Textures {
-        let t = Textures::new();
-
-        let upload_s3_texture  = |tex: &Image, tex_unit: GLenum, tex_id: IdVal| {
-
-            let block_size = tex.block_size as i32;
-            let format = tex.format.gl_format();
-
-            unsafe {
-                gl::ActiveTexture(tex_unit);
-                gl::BindTexture(gl::TEXTURE_2D, tex_id);
-                for (level,m) in tex.mipmap_iter().enumerate()  {
-                    gl::CompressedTexImage2D(gl::TEXTURE_2D, level as i32, format, m.width, m.height,
-                                             0, m.data.len() as i32, m.data.as_ptr() as *const GLvoid);
-                }
-            }
-            // gl::GenerateMipmap(gl::TEXTURE_2D);
-        };
-
-        upload_s3_texture(&lmaps.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, t.diffuse);
-        upload_s3_texture(&lmaps.specular, attrs::SPECULAR_TEXTURE_UNIT, t.specular);
-
-        return t;
     }
 }
