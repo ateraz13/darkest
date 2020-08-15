@@ -129,19 +129,12 @@ impl Pipeline3D {
         self.tex_meshes[id as usize].normal_matrix = mat
     }
 
-    // There may be problems with multiplying the view and model matrices
     pub fn update_view_matrix(&mut self, mat: Mat4) {
         self.view_matrix = mat;
-        // unsafe {
-        //     gl::UniformMatrix4fv(4, 1, gl::FALSE, mat.as_ptr())
-        // }
     }
 
     pub fn update_projection_matrix(&mut self, mat: Mat4) {
         self.projection_matrix = mat;
-        // unsafe {
-        //     gl::UniformMatrix4fv(4, 1, gl::FALSE, mat.as_ptr())
-        // }
     }
 
     pub fn draw_textured_meshes(&self) {

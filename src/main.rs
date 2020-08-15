@@ -13,8 +13,7 @@ use crate::core::pipeline::Pipeline3D;
 use crate::core::pipeline::mgl;
 use crate::core::pipeline::mgl::s3tc;
 
-use cgmath::prelude::SquareMatrix;
-
+use cgmath::prelude::{ Matrix, SquareMatrix };
 
 // TODO: Start preparing debug.rs
 // OpenGL debugging and error checking modes
@@ -126,11 +125,19 @@ fn main () -> io::Result<()> {
             }
         }
 
-        let model_mat  = cgmath::Matrix4::<f32>::identity();
-        let view_mat = cgmath::Matrix4::<f32>::identity();
-        let normal_mat =  cgmath::Matrix4::<f32>::identity();
-        let proj_mat  = cgmath::Matrix4::<f32>::identity();
+        let model_mat  = cgmath::Matrix4::<f32>::from_translation(
+            cgmath::Vector3::new( 0.0, 0.0, -2.0 ),
+        );
+        let view_mat = cgmath::Matrix4::<f32>::look_at(
+            cgmath::Point3::new( ( time.as_millis() as f32 / 1000.0 ).sin() * -1.0, 0.0, 0.0 ),
+            cgmath::Point3::new( 0.0, 0.0, -2.0 ),
+            cgmath::Vector3::new( 0.0, 1.0, 0.0 ),
+        );
         let model_view_mat = view_mat * model_mat;
+        let normal_mat = model_view_mat.invert().unwrap().transpose();
+        let proj_mat  = cgmath::perspective(
+            cgmath::Deg(90.0), 4.0/3.0, 1.0, 1000.0
+        );
         let mvp = proj_mat * view_mat * model_mat;
 
         // Drawing code
