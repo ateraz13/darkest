@@ -27,47 +27,106 @@ pub mod attrs {
     pub const NORMAL_SAMPLER_LOCATION : IdVal = 9;
 }
 
-#[derive(Default,Debug)]
-pub struct Buffers {
-    // Only id values allowed
-    pub indices: IdVal,
-    pub position: IdVal,
-    pub normal: IdVal,
-    pub uv: IdVal,
-}
+macro_rules! define_buffers {
+    {$name:ident { $first_field:ident, $($other_fields:ident),+} } => {
 
-#[derive(Default,Debug)]
-pub struct Mesh {
-    pub vao: IdVal,
-    pub element_count: GLsizei,
-    pub buffers: Buffers,
-}
-
-#[derive(Debug)]
-pub struct TexturedMesh {
-    pub mesh: Mesh,
-    pub textures: textures::Textures,
-}
-
-impl Buffers {
-    pub fn new() -> Self {
-        let mut buffs : Buffers = Default::default();
-        unsafe {
-            gl::GenBuffers((std::mem::size_of::<Buffers>()/std::mem::size_of::<IdVal>()) as GLsizei,
-                           (&mut buffs.indices) as *mut GLuint);
+        #[derive(Default,Debug)]
+        struct $name {
+            pub $first_field : IdVal,
+            $(pub $other_fields : IdVal,)*
         }
-        buffs
+
+        impl $name {
+            fn new () -> Self {
+                let buffs = Self {
+                    $first_field : 0,
+                    $($other_fields : 0,)*
+                };
+
+                unsafe {
+                    gl::GenBuffers((std::mem::size_of::<Self>()/std::mem::size_of::<IdVal>()) as GLsizei,
+                                   (&mut buffs.$first_field) as *mut GLuint);
+                }
+
+                buffs
+            }
+
+            unsafe fn as_ptr(&self) -> *const IdVal {
+                &self.$first_field as *const IdVal
+            }
+
+            unsafe fn as_mut_ptr(&mut self) -> *mut IdVal {
+                &mut self.$first_field as *mut IdVal
+            }
+
+            fn print_ids(&self) {
+                println!("struct {}", stringify!($name));
+                println!("\t{} : {}", stringify!($first_field), self.$first_field);
+                $(println!("\t{} : {}", stringify!($other_fields), self.$other_fields);)+
+                println!("}}");
+            }
+        }
+    }
+
+
+}
+
+pub mod basic_mesh {
+
+    use super::textures;
+    use super::IdVal;
+    use gl::types::*;
+
+
+    define_buffers!( Buffers {
+        index, position, normal, uv
+    });
+
+    #[derive(Debug)]
+    pub struct Mesh {
+        pub vao: IdVal,
+        pub element_count: GLsizei,
+        pub buffers: Buffers,
+        pub textures: textures::Basic,
+    }
+
+    impl Mesh {
+        pub fn new() -> Self {
+            Self {
+                vao: 0,
+                element_count: 0,
+                buffers: Buffers::new(),
+                textures: textures::Basic::new(),
+            }
+        }
     }
 }
 
+pub mod normal_mapped_mesh {
 
+    use super::textures;
+    use super::IdVal;
+    use gl::types::*;
 
-impl Mesh {
-    pub fn new() -> Self {
-        Self {
-            vao: 0,
-            element_count: 0,
-            buffers: Buffers::new(),
+    define_buffers!( Buffers {
+        index, position, normal, uv, tangent, bitangent
+    });
+
+    pub struct Mesh {
+        pub vao: IdVal,
+        pub element_count: GLsizei,
+        pub buffers: Buffers,
+        pub textures: textures::NormalMapped,
+    }
+
+    impl Mesh {
+        pub fn new() -> Self {
+            Self {
+                vao: 0,
+                element_count: 0,
+                buffers: Buffers::new(),
+                textures: textures::NormalMapped::new(),
+            }
         }
     }
 }
