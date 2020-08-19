@@ -31,14 +31,14 @@ macro_rules! define_buffers {
     {$name:ident { $first_field:ident, $($other_fields:ident),+} } => {
 
         #[derive(Default,Debug)]
-        struct $name {
+        pub struct $name {
             pub $first_field : IdVal,
             $(pub $other_fields : IdVal,)*
         }
 
         impl $name {
             fn new () -> Self {
-                let buffs = Self {
+                let mut buffs = Self {
                     $first_field : 0,
                     $($other_fields : 0,)*
                 };
@@ -165,7 +165,7 @@ pub mod basic_mesh {
                 );
             )+
 
-            let mut vao;
+            let mut vao = 0;
             gl::GenVertexArrays(1, &mut vao);
 
             $(
@@ -185,11 +185,11 @@ pub mod basic_mesh {
 
             let mut mesh: Mesh = Mesh::new();
 
-            m.element_count = data.attributes.indices.len().try_into().unwrap();
+            mesh.element_count = data.attributes.indices.len().try_into().unwrap();
 
             unsafe {
 
-                m.vao = buffer_data!(
+                mesh.vao = buffer_data!(
                     generate_vao;
 
                     (mesh.buffers.index) => {
@@ -219,6 +219,7 @@ pub mod basic_mesh {
                         config: packed vec2 array
                     }
                 );
+            }
 
 
             mesh
@@ -251,16 +252,6 @@ pub mod normal_mapped_mesh {
                 buffers: Buffers::new(),
                 textures: textures::NormalMapped::new(),
             }
-        }
-    }
-}
-
-
-impl TexturedMesh {
-    pub fn new(m: Mesh, t: Textures) -> Self {
-        Self {
-            mesh: m,
-            textures: t,
         }
     }
 }

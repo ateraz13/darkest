@@ -54,7 +54,7 @@ fn main () -> io::Result<()> {
 
         p3d.activate_shader();
 
-        let light_maps = helpers::mesh3d::load_dds_lightmaps (
+        let light_maps = helpers::mesh3d::load_dds_basic_lightmaps (
             &app, "assets/diff.dds", "assets/spec.dds"
         );
 

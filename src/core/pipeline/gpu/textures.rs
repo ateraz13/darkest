@@ -38,6 +38,19 @@ impl Basic {
         }
         texs
     }
+
+    pub fn upload_all_textures(&mut self, lightmaps: &mgl::attr::mesh3d::lightmaps::Basic) {
+        upload_s3_basic_lightmap_textures(&lightmaps, &self);
+    }
+}
+
+impl Drop for Basic {
+    fn drop(&mut self) {
+        unsafe {
+            gl::GenBuffers((std::mem::size_of::<Self>()/std::mem::size_of::<IdVal>()) as GLsizei,
+                           (&mut self.diffuse) as *mut GLuint);
+        }
+    }
 }
 
 impl NormalMapped {
@@ -48,6 +61,19 @@ impl NormalMapped {
                            (&mut texs.diffuse) as *mut GLuint);
         }
         texs
+    }
+
+    pub fn upload_all_textures(&mut self, lightmaps: &mgl::attr::mesh3d::lightmaps::NormalMapped) {
+        upload_s3_normalmapped_lightmap_textures(&lightmaps, &self);
+    }
+}
+
+impl Drop for NormalMapped {
+    fn drop(&mut self) {
+        unsafe {
+            gl::GenBuffers((std::mem::size_of::<Self>()/std::mem::size_of::<IdVal>()) as GLsizei,
+                           (&mut self.diffuse) as *mut GLuint);
+        }
     }
 }
 
@@ -73,26 +99,36 @@ impl From<NormalMapped> for Textures {
     }
 }
 
+fn upload_s3_texture (tex: &Image, tex_unit: GLenum, tex_id: IdVal) {
+
+    let block_size = tex.block_size as i32;
+    let format = tex.format.gl_format();
+
+    unsafe {
+        gl::ActiveTexture(tex_unit);
+        gl::BindTexture(gl::TEXTURE_2D, tex_id);
+        for (level,m) in tex.mipmap_iter().enumerate()  {
+            gl::CompressedTexImage2D(gl::TEXTURE_2D, level as i32, format, m.width, m.height,
+                                     0, m.data.len() as i32, m.data.as_ptr() as *const GLvoid);
+        }
+    }
+    // Mipmaps are stored by the texture format
+    // gl::GenerateMipmap(gl::TEXTURE_2D);
+}
+
+fn upload_s3_basic_lightmap_textures(lm: &mgl::attr::mesh3d::lightmaps::Basic, textures: &Basic) {
+    upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, textures.diffuse);
+    upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, textures.specular);
+}
+
+fn upload_s3_normalmapped_lightmap_textures(lm: &mgl::attr::mesh3d::lightmaps::NormalMapped, textures: &NormalMapped) {
+    upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, textures.diffuse);
+    upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, textures.specular);
+    upload_s3_texture(&lm.normal, attrs::NORMAL_TEXTURE_UNIT, textures.normal);
+}
 
 impl From<&LightMaps> for Textures {
     fn from (lmaps: &LightMaps) -> Textures {
-
-        let upload_s3_texture  = |tex: &Image, tex_unit: GLenum, tex_id: IdVal| {
-
-            let block_size = tex.block_size as i32;
-            let format = tex.format.gl_format();
-
-            unsafe {
-                gl::ActiveTexture(tex_unit);
-                gl::BindTexture(gl::TEXTURE_2D, tex_id);
-                for (level,m) in tex.mipmap_iter().enumerate()  {
-                    gl::CompressedTexImage2D(gl::TEXTURE_2D, level as i32, format, m.width, m.height,
-                                             0, m.data.len() as i32, m.data.as_ptr() as *const GLvoid);
-                }
-            }
-            // Mipmaps are stored by the texture format
-            // gl::GenerateMipmap(gl::TEXTURE_2D);
-        };
 
         let prepared_textures : Textures = match lmaps {
             LightMaps::Basic(lm) => {
@@ -101,11 +137,11 @@ impl From<&LightMaps> for Textures {
                 upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, t.specular);
                 t.into()
             },
-            LightMaps::Basic(lm) => {
+            LightMaps::NormalMapped(lm) => {
                 let t = NormalMapped::new();
                 upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, t.diffuse);
                 upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, t.specular);
-                upload_s3_texture(&lm.specular, attrs::NORMAL_TEXTURE_UNIT, t.normal);
+                upload_s3_texture(&lm.normal, attrs::NORMAL_TEXTURE_UNIT, t.normal);
                 t.into()
             }
         };

@@ -91,13 +91,14 @@ impl Pipeline3D {
     }
 
     //FIXME: If this is slow than try something else
-    pub fn prepare_textured_meshes(&mut self, data: &[(&mgl::attr::mesh3d::LightMaps, &mgl::attr::mesh3d::IndexedMesh)])
+    pub fn prepare_textured_meshes(&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::Basic, &mgl::attr::mesh3d::IndexedMesh)])
     {
         self.tex_meshes.clear();
         self.tex_meshes.reserve_exact(data.len());
         for (lm, im) in data.iter() {
-            let tm = gpu::basic_mesh::Mesh::new(gpu::Mesh::from(*im),
-                                             gpu::Textures::from(*lm));
+            let mut tm = gpu::basic_mesh::Mesh::from(*im);
+            tm.textures.upload_all_textures(lm);
+
             self.tex_meshes.push(TexMeshData{
                 resource: tm,
                 model_matrix: Mat4::identity(),
