@@ -63,7 +63,7 @@ macro_rules! define_buffers {
                 println!("struct {}", stringify!($name));
                 println!("\t{} : {}", stringify!($first_field), self.$first_field);
                 $(println!("\t{} : {}", stringify!($other_fields), self.$other_fields);)+
-                println!("}}");
+                    println!("}}");
             }
         }
     }
@@ -73,10 +73,9 @@ macro_rules! define_buffers {
 
 pub mod basic_mesh {
 
-    use super::textures;
-    use super::IdVal;
+    use super::{ textures, IdVal, attrs };
     use gl::types::*;
-
+    use crate::core::pipeline::mgl::attr::mesh3d;
 
     define_buffers!( Buffers {
         index, position, normal, uv
@@ -98,6 +97,131 @@ pub mod basic_mesh {
                 buffers: Buffers::new(),
                 textures: textures::Basic::new(),
             }
+        }
+    }
+
+    fn size_of_vec<T>(v: &Vec<T>) -> GLsizeiptr {
+        ( std::mem::size_of::<T>() * v.len() ) as GLsizeiptr
+    }
+
+
+    #[allow(unused_macros)]
+    macro_rules! buffer_bind_target {
+        (element_array) => {gl::ELEMENT_ARRAY_BUFFER};
+        (array) => {gl::ARRAY_BUFFER};
+    }
+
+    macro_rules! vertex_attrib_type {
+        (float) => {gl::FLOAT};
+        (vec2) => {gl::FLOAT};
+        (vec3) => {gl::FLOAT};
+        (vec4) => {gl::FLOAT};
+        (mat2) => {gl::FLOAT};
+        (mat3) => {gl::FLOAT};
+        (mat4) => {gl::FLOAT};
+    }
+
+    macro_rules! vertex_attrib_component_count {
+        (float) => {1};
+        (vec2) => {2};
+        (vec3) => {3};
+        (vec4) => {4};
+        (mat2) => {4};
+        (mat3) => {9};
+        (mat4) => {16};
+    }
+
+    macro_rules! vertex_attrib_ptr {
+        (target: element_array $($rest:tt)*) => {};
+        (target: $target:tt, id: $id:expr, location: $loc:expr, config: packed $type:tt array) => {
+            gl::BindBuffer(buffer_bind_target!($target), $id);
+            gl::EnableVertexAttribArray($loc);
+
+            gl::VertexAttribPointer(
+                $loc,
+                vertex_attrib_component_count!($type),
+                vertex_attrib_type!($type),
+                gl::FALSE,
+                0,
+                std::ptr::null()
+            );
+        }
+    }
+
+    #[allow(unused_macros)]
+    macro_rules! buffer_access_method {
+        (static_draw) => {gl::STATIC_DRAW};
+    }
+
+    macro_rules! buffer_data  {
+        (generate_vao; $(($id:expr) => { data: $data:expr, target: $target:tt, access: $access:tt$(, $($rest:tt)*)? }),+) => {{
+            $(
+                gl::BindBuffer(buffer_bind_target!($target), $id);
+                gl::BufferData(
+                    buffer_bind_target!($target),
+                    size_of_vec(&$data),
+                    $data.as_ptr() as *const GLvoid,
+                    buffer_access_method!($access)
+                );
+            )+
+
+            let mut vao;
+            gl::GenVertexArrays(1, &mut vao);
+
+            $(
+                vertex_attrib_ptr!(
+                    target: $target, $(id: $id,$($rest)*)?
+                );
+            )+
+                vao
+        }}
+    }
+
+    use std::convert::TryInto;
+
+    impl From<&mesh3d::IndexedMesh> for Mesh {
+
+        fn from(data: &mesh3d::IndexedMesh) -> Self {
+
+            let mut mesh: Mesh = Mesh::new();
+
+            m.element_count = data.attributes.indices.len().try_into().unwrap();
+
+            unsafe {
+
+                m.vao = buffer_data!(
+                    generate_vao;
+
+                    (mesh.buffers.index) => {
+                        data: data.attributes.indices,
+                        target: element_array,
+                        access: static_draw
+                    },
+                    (mesh.buffers.position) => {
+                        data: data.attributes.positions,
+                        target: array,
+                        access: static_draw,
+                        location: attrs::POSITION_LOCATION,
+                        config: packed vec3 array
+                    },
+                    (mesh.buffers.normal) => {
+                        data: data.attributes.normals,
+                        target: array,
+                        access: static_draw,
+                        location: attrs::NORMAL_LOCATION,
+                        config: packed vec3 array
+                    },
+                    (mesh.buffers.uv) => {
+                        data: data.attributes.uvs,
+                        target: array,
+                        access: static_draw,
+                        location: attrs::UV_LOCATION,
+                        config: packed vec2 array
+                    }
+                );
+
+
+            mesh
         }
     }
 }
@@ -131,99 +255,6 @@ pub mod normal_mapped_mesh {
     }
 }
 
-use mgl::attr::mesh3d;
-
-impl From<&mesh3d::IndexedMesh> for Mesh {
-
-    fn from(data: &mesh3d::IndexedMesh) -> Self {
-
-        let mut m: Mesh = Mesh::new();
-
-        m.element_count = data.indices.len().try_into().unwrap();
-
-        unsafe {
-
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, m.buffers.indices);
-            gl::BufferData(
-                gl::ELEMENT_ARRAY_BUFFER,
-                data.index_buffer_size(),
-                data.index_buffer_ptr(),
-                gl::STATIC_DRAW
-            );
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, m.buffers.position);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                data.attributes.position_buffer_size(),
-                data.attributes.position_buffer_ptr(),
-                gl::STATIC_DRAW
-            );
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, m.buffers.normal);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                data.attributes.normal_buffer_size(),
-                data.attributes.normal_buffer_ptr(),
-                gl::STATIC_DRAW
-            );
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, m.buffers.uv);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                data.attributes.uv_buffer_size(),
-                data.attributes.uv_buffer_ptr(),
-                gl::STATIC_DRAW
-            );
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, 0); // unbind
-
-            gl::GenVertexArrays(1, &mut m.vao);
-
-            gl::BindVertexArray(m.vao);
-            gl::BindBuffer(gl::ARRAY_BUFFER, m.buffers.position);
-            gl::EnableVertexAttribArray(attrs::POSITION_LOCATION);
-
-            gl::VertexAttribPointer (
-                attrs::POSITION_LOCATION,
-                3,// data.attributes.pos_comp_type.count() as i32,
-                gl::FLOAT,// data.attributes.pos_comp_type.gl_type(),
-                gl::FALSE,
-                0, // tightly-packed
-                std::ptr::null()
-            );
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, m.buffers.normal);
-            gl::EnableVertexAttribArray(attrs::NORMAL_LOCATION);
-
-            gl::VertexAttribPointer(
-                attrs::NORMAL_LOCATION,
-                3,
-                gl::FLOAT,
-                gl::FALSE,
-                0,
-                std::ptr::null()
-            );
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, m.buffers.uv);
-            gl::EnableVertexAttribArray(attrs::UV_LOCATION);
-
-            gl::VertexAttribPointer(
-                attrs::UV_LOCATION,
-                2,
-                gl::FLOAT,
-                gl::FALSE,
-                0,
-                std::ptr::null()
-            );
-
-            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
-            gl::BindVertexArray(0);
-
-        }
-        return m;
-    }
-}
 
 impl TexturedMesh {
     pub fn new(m: Mesh, t: Textures) -> Self {

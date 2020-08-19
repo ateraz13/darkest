@@ -25,7 +25,7 @@ type Mat4 = cgmath::Matrix4<f32>;
 
 #[derive(Debug)]
 pub struct TexMeshData {
-    pub resource: gpu::TexturedMesh,
+    pub resource: gpu::basic_mesh::Mesh,
     pub model_matrix: Mat4,
     pub normal_matrix: Mat4,
 }
@@ -96,7 +96,7 @@ impl Pipeline3D {
         self.tex_meshes.clear();
         self.tex_meshes.reserve_exact(data.len());
         for (lm, im) in data.iter() {
-            let tm = gpu::TexturedMesh::new(gpu::Mesh::from(*im),
+            let tm = gpu::basic_mesh::Mesh::new(gpu::Mesh::from(*im),
                                              gpu::Textures::from(*lm));
             self.tex_meshes.push(TexMeshData{
                 resource: tm,
@@ -161,9 +161,9 @@ trait Draw<T> {
     fn draw(&self, e: &T);
 }
 
-impl Draw<gpu::TexturedMesh> for Render3D {
+impl Draw<gpu::basic_mesh::Mesh> for Render3D {
 
-    fn draw(&self, e: &gpu::TexturedMesh) {
+    fn draw(&self, e: &gpu::basic_mesh::Mesh) {
 
         unsafe {
 
@@ -172,11 +172,11 @@ impl Draw<gpu::TexturedMesh> for Render3D {
             gl::ActiveTexture(gpu::attrs::SPECULAR_TEXTURE_UNIT);
             gl::BindTexture(gl::TEXTURE_2D, e.textures.specular);
 
-            gl::BindVertexArray(e.mesh.vao);
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, e.mesh.buffers.indices);
+            gl::BindVertexArray(e.vao);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, e.buffers.index);
             gl::DrawElements(
                 gl::TRIANGLES,
-                e.mesh.element_count,
+                e.element_count,
                 gl::UNSIGNED_SHORT,
                 0 as *const GLvoid
             );
