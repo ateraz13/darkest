@@ -17,11 +17,11 @@ pub struct VertexAttributes {
     pub bitangents: Vec<f32>, //
 }
 
-
 pub mod lightmaps {
 
     pub use crate::s3tc::Image;
 
+    #[allow(dead_code)]
     pub enum LightMaps {
         Basic(Basic),
         NormalMapped(NormalMapped),
@@ -49,53 +49,26 @@ impl IndexedMesh {
 
     // What if indices exeed the number of positions ?
     // Probably don't need to worry but also be careful !
+    #[allow(dead_code)]
     pub fn new(attrs: VertexAttributes) -> Self {
         Self {
             attributes: attrs,
         }
     }
 
+    #[allow(dead_code)]
     pub fn vertex_count (&self) -> GLuint {
         self.attributes.indices.len() as GLuint
     }
 
+    #[allow(dead_code)]
     pub fn index_buffer_size(&self) -> GLsizeiptr {
         (self.attributes.indices.len() * std::mem::size_of::<MeshIndex>()).try_into().unwrap()
     }
 
+    #[allow(dead_code)]
     pub fn index_buffer_ptr(&self) -> *const GLvoid {
         self.attributes.indices.as_ptr() as *const GLvoid
     }
 
-    // pub fn index_buffer_size(&self) -> GLuint {
-    //     self.indices.len() * std::mem::size_of::<MeshIndex>()
-    // }
-}
-
-
-impl VertexAttributes {
-
-    pub fn position_buffer_size(&self) -> GLsizeiptr {
-        (self.positions.len() * std::mem::size_of::<f32>()) as GLsizeiptr
-    }
-
-    pub fn normal_buffer_size(&self) -> GLsizeiptr {
-        (self.normals.len() * std::mem::size_of::<f32>()) as GLsizeiptr
-    }
-
-    pub fn uv_buffer_size(&self) -> GLsizeiptr {
-        (self.uvs.len() * std::mem::size_of::<f32>()) as GLsizeiptr
-    }
-
-    pub unsafe fn position_buffer_ptr(&self) -> *const GLvoid {
-        self.positions.as_ptr() as *const GLvoid
-    }
-
-    pub unsafe fn normal_buffer_ptr(&self) -> *const GLvoid {
-        self.normals.as_ptr() as *const GLvoid
-    }
-
-    pub unsafe fn uv_buffer_ptr(&self) -> *const GLvoid {
-        self.uvs.as_ptr() as *const GLvoid
-    }
 }

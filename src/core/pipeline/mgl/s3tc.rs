@@ -75,6 +75,7 @@ impl<'a> Iterator for S3MipmapIter<'a> {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum ImageError {
     UnsupportedCompression,
     InvalidData(String),

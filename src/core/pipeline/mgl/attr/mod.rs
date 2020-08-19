@@ -2,11 +2,14 @@ pub mod mesh3d;
 pub use gl::types::*;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum AttributeType {
     Vec2, Vec3, Vec4, Float
 }
 
 impl AttributeType {
+
+    #[allow(dead_code)]
     pub fn count(&self) -> GLuint {
         match self {
             Self::Float => 1,
@@ -16,6 +19,7 @@ impl AttributeType {
         }
     }
 
+    #[allow(dead_code)]
     pub fn gl_type(&self) -> GLenum {
         match self {
             Self::Float => gl::FLOAT,

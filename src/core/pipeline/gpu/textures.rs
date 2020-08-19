@@ -63,6 +63,7 @@ impl NormalMapped {
         texs
     }
 
+    #[allow(dead_code)]
     pub fn upload_all_textures(&mut self, lightmaps: &mgl::attr::mesh3d::lightmaps::NormalMapped) {
         upload_s3_normalmapped_lightmap_textures(&lightmaps, &self);
     }
@@ -77,6 +78,7 @@ impl Drop for NormalMapped {
     }
 }
 
+#[allow(dead_code)]
 impl Textures {
     pub fn new_basic() -> Self {
         Self::Basic(Basic::new())
@@ -101,7 +103,8 @@ impl From<NormalMapped> for Textures {
 
 fn upload_s3_texture (tex: &Image, tex_unit: GLenum, tex_id: IdVal) {
 
-    let block_size = tex.block_size as i32;
+    // FIXME: Block size is here for a reason
+    let _block_size = tex.block_size as i32;
     let format = tex.format.gl_format();
 
     unsafe {
@@ -116,11 +119,14 @@ fn upload_s3_texture (tex: &Image, tex_unit: GLenum, tex_id: IdVal) {
     // gl::GenerateMipmap(gl::TEXTURE_2D);
 }
 
+
+#[allow(dead_code)]
 fn upload_s3_basic_lightmap_textures(lm: &mgl::attr::mesh3d::lightmaps::Basic, textures: &Basic) {
     upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, textures.diffuse);
     upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, textures.specular);
 }
 
+#[allow(dead_code)]
 fn upload_s3_normalmapped_lightmap_textures(lm: &mgl::attr::mesh3d::lightmaps::NormalMapped, textures: &NormalMapped) {
     upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, textures.diffuse);
     upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, textures.specular);

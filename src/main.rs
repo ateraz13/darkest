@@ -6,23 +6,22 @@ mod helpers;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use std::path::Path;
 use std::io;
 
 use crate::core::pipeline::Pipeline3D;
-use crate::core::pipeline::mgl;
 use crate::core::pipeline::mgl::s3tc;
 
 use cgmath::prelude::{ Matrix, SquareMatrix };
 use gl::types::*;
 
-extern "system" fn gl_error_cb( source : GLenum ,
-                err_type : GLenum ,
-                _id : GLuint ,
-                severity : GLenum ,
-                _length : GLsizei ,
-                message: *const GLchar,
-                _user_param : *mut GLvoid)
+extern "system" fn gl_error_cb(
+    _source : GLenum ,
+    err_type : GLenum ,
+    _id : GLuint ,
+    severity : GLenum ,
+    _length : GLsizei ,
+    message: *const GLchar,
+    _user_param : *mut GLvoid)
 {
     use std::ffi::CStr;
     println!("GL CALLBACK: 0x{}, type: 0x{}, severity = 0x{}, message = {}",
@@ -155,7 +154,7 @@ fn main () -> io::Result<()> {
         let proj_mat  = cgmath::perspective(
             cgmath::Deg(90.0), 4.0/3.0, 1.0, 1000.0
         );
-        let mvp = proj_mat * view_mat * model_mat;
+        let _mvp = proj_mat * view_mat * model_mat;
 
         // Drawing code
         unsafe {

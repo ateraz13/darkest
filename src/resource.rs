@@ -6,7 +6,6 @@ use std::fs::File;
 use std::io::Read;
 use std::string::String;
 use std::ffi::CString;
-use std::ffi::{ OsString, OsStr };
 
 pub struct BufferLoader {
     root: PathBuf,
@@ -69,6 +68,7 @@ impl BufferLoader {
         Ok (Self {root: exe_path.parent().unwrap().to_path_buf()})
     }
 
+    #[allow(dead_code)]
     pub fn with_root(r: PathBuf) -> BufferLoaderResult<Self> {
 
         if ! r.is_dir() {

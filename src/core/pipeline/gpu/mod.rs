@@ -3,12 +3,11 @@ pub mod textures;
 // use std::convert::TryInto;
 // use crate::core::pipeline::mgl::s3tc::Image;
 use gl::types::*;
-use std::default::Default;
-use textures::Textures;
-
 pub type IdVal = GLuint;
 
-// attribute and uniform locations
+// Attribute and uniform locations they mirror
+// locations specified in the shaders basic_frag.glsl and basig_vert.glsl
+#[allow(dead_code)]
 pub mod attrs {
 
     pub type IdVal = gl::types::GLuint;
@@ -58,14 +57,18 @@ macro_rules! define_buffers {
                 buffs
             }
 
+            #[allow(dead_code)]
             unsafe fn as_ptr(&self) -> *const IdVal {
                 &self.$first_field as *const IdVal
             }
 
+            #[allow(dead_code)]
             unsafe fn as_mut_ptr(&mut self) -> *mut IdVal {
                 &mut self.$first_field as *mut IdVal
             }
 
+
+            #[allow(dead_code)]
             fn print_ids(&self) {
                 println!("struct {}", stringify!($name));
                 println!("\t{} : {}", stringify!($first_field), self.$first_field);
