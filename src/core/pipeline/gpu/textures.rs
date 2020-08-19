@@ -39,8 +39,9 @@ impl Basic {
         texs
     }
 
-    pub fn upload_all_textures(&mut self, lightmaps: &mgl::attr::mesh3d::lightmaps::Basic) {
-        upload_s3_basic_lightmap_textures(&lightmaps, &self);
+    pub fn upload_all_textures(&mut self, lm: &mgl::attr::mesh3d::lightmaps::Basic) {
+        upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, self.diffuse);
+        upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, self.specular);
     }
 }
 
@@ -64,8 +65,10 @@ impl NormalMapped {
     }
 
     #[allow(dead_code)]
-    pub fn upload_all_textures(&mut self, lightmaps: &mgl::attr::mesh3d::lightmaps::NormalMapped) {
-        upload_s3_normalmapped_lightmap_textures(&lightmaps, &self);
+    pub fn upload_all_textures(&mut self, lm: &mgl::attr::mesh3d::lightmaps::NormalMapped) {
+        upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, self.diffuse);
+        upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, self.specular);
+        upload_s3_texture(&lm.normal, attrs::NORMAL_TEXTURE_UNIT, self.normal);
     }
 }
 
@@ -119,35 +122,18 @@ fn upload_s3_texture (tex: &Image, tex_unit: GLenum, tex_id: IdVal) {
     // gl::GenerateMipmap(gl::TEXTURE_2D);
 }
 
-
-#[allow(dead_code)]
-fn upload_s3_basic_lightmap_textures(lm: &mgl::attr::mesh3d::lightmaps::Basic, textures: &Basic) {
-    upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, textures.diffuse);
-    upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, textures.specular);
-}
-
-#[allow(dead_code)]
-fn upload_s3_normalmapped_lightmap_textures(lm: &mgl::attr::mesh3d::lightmaps::NormalMapped, textures: &NormalMapped) {
-    upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, textures.diffuse);
-    upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, textures.specular);
-    upload_s3_texture(&lm.normal, attrs::NORMAL_TEXTURE_UNIT, textures.normal);
-}
-
 impl From<&LightMaps> for Textures {
     fn from (lmaps: &LightMaps) -> Textures {
 
         let prepared_textures : Textures = match lmaps {
             LightMaps::Basic(lm) => {
-                let t = Basic::new();
-                upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, t.diffuse);
-                upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, t.specular);
+                let mut t = Basic::new();
+                t.upload_all_textures(&lm);
                 t.into()
             },
             LightMaps::NormalMapped(lm) => {
-                let t = NormalMapped::new();
-                upload_s3_texture(&lm.diffuse, attrs::DIFFUSE_TEXTURE_UNIT, t.diffuse);
-                upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT, t.specular);
-                upload_s3_texture(&lm.normal, attrs::NORMAL_TEXTURE_UNIT, t.normal);
+                let mut t = NormalMapped::new();
+                t.upload_all_textures(&lm);
                 t.into()
             }
         };
