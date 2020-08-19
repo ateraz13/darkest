@@ -97,7 +97,7 @@ impl Pipeline3D {
         self.tex_meshes.reserve_exact(data.len());
         for (lm, im) in data.iter() {
             let mut tm = gpu::basic_mesh::Mesh::from(*im);
-            println!("TEXTURES: {:?}", tm);
+            println!("TEXTURED MESH: {:?}", tm);
             tm.textures.upload_all_textures(&lm);
 
             self.tex_meshes.push(TexMeshData{

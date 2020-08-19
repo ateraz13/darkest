@@ -18,11 +18,11 @@ use gl::types::*;
 
 extern "system" fn gl_error_cb( source : GLenum ,
                 err_type : GLenum ,
-                id : GLuint ,
+                _id : GLuint ,
                 severity : GLenum ,
-                length : GLsizei ,
+                _length : GLsizei ,
                 message: *const GLchar,
-                userParam : *mut GLvoid)
+                _user_param : *mut GLvoid)
 {
     use std::ffi::CStr;
     println!("GL CALLBACK: 0x{}, type: 0x{}, severity = 0x{}, message = {}",
