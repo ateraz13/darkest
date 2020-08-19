@@ -97,7 +97,7 @@ impl Pipeline3D {
         self.tex_meshes.reserve_exact(data.len());
         for (lm, im) in data.iter() {
             let mut tm = gpu::basic_mesh::Mesh::from(*im);
-            println!("TEXTURED MESH: {:?}", tm);
+            // println!("TEXTURED MESH: {:?}", tm);
             tm.textures.upload_all_textures(&lm);
 
             self.tex_meshes.push(TexMeshData{
@@ -179,7 +179,7 @@ impl Draw<gpu::basic_mesh::Mesh> for Render3D {
             gl::DrawElements(
                 gl::TRIANGLES,
                 e.element_count,
-                gl::UNSIGNED_SHORT,
+                gl::UNSIGNED_INT,
                 0 as *const GLvoid
             );
 

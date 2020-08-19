@@ -134,6 +134,7 @@ pub mod basic_mesh {
     macro_rules! vertex_attrib_ptr {
         (target: element_array $($rest:tt)*) => {};
         (target: $target:tt, id: $id:expr, location: $loc:expr, config: packed $type:tt array) => {
+
             gl::EnableVertexAttribArray($loc);
             gl::BindBuffer(buffer_bind_target!($target), $id);
 
@@ -164,17 +165,24 @@ pub mod basic_mesh {
                     $data.as_ptr() as *const GLvoid,
                     buffer_access_method!($access)
                 );
+                // println!("SIZE_OF_VEC({}) = {}", stringify!($data), size_of_vec(&$data));
             )+
 
             let mut vao = 0;
             gl::GenVertexArrays(1, &mut vao);
+            gl::BindVertexArray(vao);
 
             $(
                 vertex_attrib_ptr!(
                     target: $target, $(id: $id,$($rest)*)?
                 );
             )+
-                vao
+
+            gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, 0);
+            gl::BindVertexArray(0);
+
+            vao
         }}
     }
 
