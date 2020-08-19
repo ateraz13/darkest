@@ -24,7 +24,7 @@ fn main() {
     let dest = env::var("OUT_DIR").unwrap();
     let mut file = File::create(&Path::new(&dest).join("bindings.rs")).unwrap();
 
-    Registry::new(Api::Gl, (4, 2), Profile::Core, Fallbacks::All, [
+    Registry::new(Api::Gl, (4, 5), Profile::Core, Fallbacks::All, [
         "GL_EXT_texture_compression_s3tc",
         "GL_ARB_texture_compression",
         "GL_ARB_texture_view"

@@ -14,14 +14,23 @@ use crate::core::pipeline::mgl;
 use crate::core::pipeline::mgl::s3tc;
 
 use cgmath::prelude::{ Matrix, SquareMatrix };
+use gl::types::*;
 
-// TODO: Start preparing debug.rs
-// OpenGL debugging and error checking modes
-//
-// Unsafe code should be wrapped with macro
-// On failure OpenGL code could be tested in
-// debbug mode.
+extern "system" fn gl_error_cb( source : GLenum ,
+                err_type : GLenum ,
+                id : GLuint ,
+                severity : GLenum ,
+                length : GLsizei ,
+                message: *const GLchar,
+                userParam : *mut GLvoid)
+{
+    use std::ffi::CStr;
+    println!("GL CALLBACK: 0x{}, type: 0x{}, severity = 0x{}, message = {}",
+             if err_type == gl::DEBUG_TYPE_ERROR { "** GL ERROR **"  } else { "" },
+             err_type, severity, unsafe {CStr::from_ptr(message).to_str().unwrap()}
+    );
 
+}
 
 fn main () -> io::Result<()> {
 
@@ -48,6 +57,15 @@ fn main () -> io::Result<()> {
             _ => {}
         }
     }).unwrap();
+
+    unsafe {
+
+        gl::Enable(gl::DEBUG_OUTPUT);
+        gl::DebugMessageCallback(gl_error_cb, std::ptr::null());
+
+    }
+
+
 
     {
         let plane  = helpers::mesh3d::create_plane();

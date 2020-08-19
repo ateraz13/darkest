@@ -134,9 +134,10 @@ pub mod basic_mesh {
     macro_rules! vertex_attrib_ptr {
         (target: element_array $($rest:tt)*) => {};
         (target: $target:tt, id: $id:expr, location: $loc:expr, config: packed $type:tt array) => {
-            gl::BindBuffer(buffer_bind_target!($target), $id);
             gl::EnableVertexAttribArray($loc);
+            gl::BindBuffer(buffer_bind_target!($target), $id);
 
+            println!("Vertex attrib point {}", $loc);
             gl::VertexAttribPointer(
                 $loc,
                 vertex_attrib_component_count!($type),
@@ -188,7 +189,6 @@ pub mod basic_mesh {
             mesh.element_count = data.attributes.indices.len().try_into().unwrap();
 
             unsafe {
-
                 mesh.vao = buffer_data!(
                     generate_vao;
 
@@ -220,7 +220,6 @@ pub mod basic_mesh {
                     }
                 );
             }
-
 
             mesh
         }
