@@ -106,10 +106,10 @@ fn main () -> io::Result<()> {
                             },
                             Keycode::B => {
                                 if enable_blinn {
-                                    unsafe {gl::Uniform1i(20, 0);}
+                                    unsafe {gl::Uniform1i(core::pipeline::gpu::attrs::USE_BLINN_FLAG, 0);}
                                     enable_blinn = false;
                                 } else {
-                                    unsafe {gl::Uniform1i(20, 1);}
+                                    unsafe {gl::Uniform1i(core::pipeline::gpu::attrs::USE_BLINN_FLAG, 1);}
                                     enable_blinn = true;
                                 }
                             }

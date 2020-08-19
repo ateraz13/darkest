@@ -7,13 +7,18 @@ out vec4 frag_color;
 layout (location = 1) uniform mat4 model_mat;
 layout (location = 2) uniform mat4 modelview_mat = mat4(1);
 layout (location = 4) uniform mat4 mvp;
-layout (location = 7) uniform sampler2D diffuse_texture;
-layout (location = 8)uniform sampler2D specular_texture;
+
+layout (location = 20) uniform sampler2D diffuse_texture;
+layout (location = 21)uniform sampler2D specular_texture;
+layout (location = 22)uniform sampler2D normal_texture;
 
 // layout (location = 6) uniform vec3 sun_dir = vec3(1.0, -1.0, 0.0);
 layout (location = 9) uniform vec3 sun_pos = vec3(0.0, 0.0, 0.0);
 layout (location = 10) uniform vec3 view_pos = vec3(0.0, 0.0, 1.0);
 // uniform vec3 sun_dir = vec3(0.3, 0.3, -0.3);
+
+layout (location = 30) uniform bool use_normalmap = false;
+layout (location = 31) uniform bool use_blinn = false;
 
 struct Sun {
   vec3 position;
@@ -29,7 +34,6 @@ uniform Sun sun = Sun (
    vec3(1.0, 1.0, 1.0)
 );
 
-layout (location = 20) uniform bool use_blinn = false;
 
 uniform float sun_power = 1.0;
 uniform float specular_power = 32.0;
