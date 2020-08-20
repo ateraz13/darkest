@@ -4,17 +4,19 @@ use super::AttributeType;
 
 type MeshIndex = GLuint;
 
+type Vector3 = cgmath::Vector3<f32>;
+type Vector2 = cgmath::Vector2<f32>;
+
 #[derive(Debug)]
 pub struct VertexAttributes {
-    pub pos_comp_type: AttributeType,
     // NOTE: we do not use vector types for attributes because we may want
     // different number of components for some attributes
     pub indices: Vec<MeshIndex>,
-    pub positions: Vec<f32>, // 2 or 3 components per position
-    pub normals: Vec<f32>, // 3 components per normal
-    pub uvs: Vec<f32>, // 2 components per uv
-    pub tangents: Vec<f32>, // 3 components per tangent
-    pub bitangents: Vec<f32>, //
+    pub positions: Vec<Vector3>,
+    pub normals: Vec<Vector3>,
+    pub uvs: Vec<Vector2>,
+    pub tangents: Vec<Vector3>,
+    pub bitangents: Vec<Vector3>, //
 }
 
 pub mod lightmaps {
@@ -69,6 +71,10 @@ impl IndexedMesh {
     #[allow(dead_code)]
     pub fn index_buffer_ptr(&self) -> *const GLvoid {
         self.attributes.indices.as_ptr() as *const GLvoid
+    }
+
+    pub fn generate_tangents(&mut self) {
+
     }
 
 }

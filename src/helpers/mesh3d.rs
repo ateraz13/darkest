@@ -4,12 +4,13 @@ use crate::core::pipeline::mgl;
 use crate::core::pipeline::mgl::s3tc;
 use crate::core::app;
 
+type Vector3 = cgmath::Vector3<f32>;
+type Vector2 = cgmath::Vector2<f32>;
+
 pub fn create_plane() -> mgl::attr::mesh3d::IndexedMesh {
     mgl::attr::mesh3d::IndexedMesh {
 
             attributes: mgl::attr::mesh3d::VertexAttributes {
-
-                pos_comp_type: mgl::attr::AttributeType::Vec3,
 
                 indices: vec![
                     0, 1, 3, 2, 3, 1
@@ -17,24 +18,24 @@ pub fn create_plane() -> mgl::attr::mesh3d::IndexedMesh {
 
                 // 3 components per position
                 positions: vec![
-                    -1.0, 1.0, -1.0,  // bottom right
-                    -1.0, -1.0, -1.0, // bottom left
-                    1.0, -1.0, -1.0,  // top left
-                    1.0, 1.0, -1.0,   // top right
+                    Vector3::new(-1.0, 1.0, -1.0),  // bottom right
+                    Vector3::new(-1.0, -1.0, -1.0), // bottom left
+                    Vector3::new(1.0, -1.0, -1.0),  // top left
+                    Vector3::new(1.0, 1.0, -1.0),   // top right
                 ],
 
                 normals: vec![
-                    0.0, 0.0, 1.0,
-                    0.0, 0.0, 1.0,
-                    0.0, 0.0, 1.0,
-                    0.0, 0.0, 1.0,
+                    Vector3::new(0.0, 0.0, 1.0),
+                    Vector3::new(0.0, 0.0, 1.0),
+                    Vector3::new(0.0, 0.0, 1.0),
+                    Vector3::new(0.0, 0.0, 1.0),
                 ],
 
                 uvs: vec! [
-                    1.0, 0.0,
-                    0.0, 0.0,
-                    0.0, 1.0,
-                    1.0, 1.0
+                    Vector2::new(1.0, 0.0),
+                    Vector2::new(0.0, 0.0),
+                    Vector2::new(0.0, 1.0),
+                    Vector2::new(1.0, 1.0)
                 ],
 
                 tangents: vec![],
