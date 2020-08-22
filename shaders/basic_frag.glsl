@@ -35,13 +35,15 @@ uniform Sun sun = Sun (
 );
 
 
-uniform float sun_power = 1.0;
+uniform float sun_intensity = 2.0;
 uniform float specular_power = 32.0;
-uniform float specular_intensity = 30.0;
+uniform float specular_intensity = 0.5;
 
-smooth in vec3 frag_normal;
+flat in vec3 vert_normal;
 smooth in vec3 frag_position;
-in vec2 frag_uv;
+smooth in vec3 sun_dir;
+smooth in vec2 frag_uv;
+in mat3 tbn_mat;
 
 vec3 pos_view_space(vec3 vin) {
   return vec3(modelview_mat * vec4(vin, 1.0));
@@ -49,12 +51,19 @@ vec3 pos_view_space(vec3 vin) {
 
 void main () {
 
-  vec3 sun_dir = (sun_pos - frag_position.xyz);
-  float sun_dist = length(sun_dir);
-  float sun_dist2 = sun_dist * sun_dist;
-  sun_dir = normalize(sun_dir);
+  vec3 frag_normal = vert_normal;
+
+  float sun_dist2= pow(length(sun_dir), 2);
   vec3 view_dir = normalize(view_pos -  frag_position);
   // vec3 view_dir = normalize(-frag_position);
+  //
+  if(use_normalmap) {
+
+    frag_normal = texture(normal_texture, frag_uv).rgb;
+    frag_normal = frag_normal * 2.0 - 1.0;
+    frag_normal = normalize( tbn_mat * frag_normal );
+
+  }
 
   float diffuse_scalar = max(dot(frag_normal, sun_dir), 0.0);
   float specular_scalar;
@@ -68,10 +77,12 @@ void main () {
     specular_scalar = pow(max(dot(view_dir, reflect_dir), 0.0), specular_power/4.0);
   }
 
+
+
   vec3 diffuse = diffuse_scalar * sun.diffuse * texture(diffuse_texture, frag_uv).rgb / sun_dist2;
-  vec3 specular = specular_scalar * sun.specular * texture(specular_texture, frag_uv).rgb / sun_dist2 * specular_intensity;
+  vec3 specular = specular_scalar * sun.specular * ( texture(specular_texture, frag_uv).rgb  )/ sun_dist2 * specular_intensity;
   vec3 ambient = sun.ambient * texture(diffuse_texture, frag_uv).rgb;
 
   // frag_color = vec4(1.0, 0.0, 0.0, 1.0);
-  frag_color = vec4((ambient + diffuse + specular), 1.0);
+  frag_color = vec4((ambient + diffuse * sun_intensity + specular * specular_intensity), 1.0);
 }

@@ -4,8 +4,8 @@
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 normal;
 layout (location = 2) in vec2 uv;
-layout (location = 3) in vec2 tangent;
-layout (location = 4) in vec2 bitangent;
+layout (location = 3) in vec3 tangent;
+layout (location = 4) in vec3 bitangent;
 
 layout (location = 1) uniform mat4 model_mat = mat4(1);
 layout (location = 2) uniform mat4 modelview_mat = mat4(1);
@@ -14,20 +14,49 @@ layout (location = 4) uniform mat4 mvp = mat4(1);
 layout (location = 5) uniform mat4 normal_mat = mat4(1);
 layout (location = 6) uniform float time;
 
-smooth out vec3 frag_normal;
+layout (location = 9) uniform vec3 sun_pos = vec3(0.0, 0.0, 0.0);
+
+layout (location = 30) uniform bool use_normalmap = false;
+
+flat out vec3 vert_normal;
 smooth out vec3 frag_position;
 out vec2 frag_uv;
+out vec3 eye_dir;
+
+out vec3 sun_dir_tanspace;
+out vec3 eye_dir_tanspace;
+out vec3 sun_dir;
+out mat3 tbn_mat;
 
 void main() {
-     // frag_normal = normalize(inverse( transpose(model_mat)) * normal);
-     // frag_normal = normalize(inverse(transpose(view_mat * model_mat)  )* vec4(normal, 0.0));
 
-  frag_normal = vec3(normal_mat * vec4(normal, 0));
-  // frag_normal = vec3(inverse(transpose(modelview_mat)) * vec4(normal, 0));
+  sun_dir = (sun_pos - position.xyz);
 
+  vert_normal = vec3(normal_mat * vec4(normal, 0));
   frag_uv = vec2(uv.x, 1.0-uv.y);
+
   vec4 p4 = modelview_mat * vec4(position, 1.0);
   frag_position = position.xyz / p4.w;
+
   gl_Position =  mvp * vec4(position, 1.0);
-  // gl_Position =  vec4(position, 1.0);
+  //
+  vec3 pos_camspace = p4.xyz;
+  eye_dir = vec3(0, 0, 0) - pos_camspace;
+
+  if(use_normalmap) {
+    mat3 mv3 = mat3(modelview_mat);
+    vec3 normal_camspace =  mv3 * normalize(normal);
+    vec3 tangent_camspace =  mv3 * normalize(tangent);
+    vec3 bitangent_camspace =  mv3 * normalize(bitangent);
+
+    mat3 tbn = transpose(mat3 (
+      tangent_camspace,
+      bitangent_camspace,
+      normal_camspace
+    ));
+
+    sun_dir_tanspace = tbn * sun_dir;
+    eye_dir_tanspace = tbn * eye_dir;
+  }
+
 }
