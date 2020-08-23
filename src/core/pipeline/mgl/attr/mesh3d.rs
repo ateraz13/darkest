@@ -75,6 +75,7 @@ impl IndexedMesh {
 
     pub fn generate_tangents(&mut self) {
 
+        let indices = &self.attributes.indices;
         let pos = &self.attributes.positions;
         let uvs = &self.attributes.uvs;
         let tans = &mut self.attributes.tangents;
@@ -87,9 +88,19 @@ impl IndexedMesh {
         bitans.reserve_exact(pos.len());
 
 
-        for i in (0 .. pos.len()).step_by(3) {
-            let (v1, v2, v3) = (&pos[i], &pos[i+1], &pos[i+2]);
-            let (uv1, uv2, uv3) = (&uvs[i], &uvs[i+1], &uvs[i+2]);
+        for i in (0 .. indices.len()).step_by(3) {
+
+            let (v1, v2, v3) = (
+                &pos[indices[i] as usize],
+                &pos[indices[ i+1 ] as usize],
+                &pos[indices[ i+2 ] as usize]
+            );
+
+            let (uv1, uv2, uv3) = (
+                &uvs[indices[i] as usize],
+                &uvs[indices[ i+1 ] as usize],
+                &uvs[indices[ i+2 ] as usize]
+            );
 
             let delta_pos1 = v2 - v1;
             let delta_pos2 = v3 - v1;

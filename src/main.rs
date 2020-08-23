@@ -64,18 +64,16 @@ fn main () -> io::Result<()> {
 
     }
 
-
-
     {
-        let plane  = helpers::mesh3d::create_plane();
+        let plane  = helpers::mesh3d::create_plane_with_tangents();
 
         p3d.activate_shader();
 
-        let light_maps = helpers::mesh3d::load_dds_basic_lightmaps (
-            &app, "assets/diff.dds", "assets/spec.dds"
+        let light_maps = helpers::mesh3d::load_dds_normal_mapped_lightmaps (
+            &app, "assets/diff.dds", "assets/spec.dds", "assets/norm.dds"
         );
 
-        p3d.prepare_textured_meshes(&[
+        p3d.prepare_normal_mapped_textured_meshes(&[
             ( &light_maps, &plane )
         ]);
     }
@@ -160,8 +158,10 @@ fn main () -> io::Result<()> {
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
-            gl::Uniform1i(7, 0); // Texture Unit 0 : DIFFUSE
-            gl::Uniform1i(8, 1); // Texture Unit 1 : SPECULAR
+            // gl::Uniform1i(20, 0); // Texture Unit 0 : DIFFUSE
+            // gl::Uniform1i(8, 1); // Texture Unit 1 : SPECULAR
+            // gl::Uniform1i(9, 2); // Texture Unit 1 : SPECULAR
+
         }
 
         p3d.update_projection_matrix(proj_mat.clone());

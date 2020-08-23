@@ -19,16 +19,16 @@ pub mod attrs {
     pub const TANGENT_LOCATION : IdVal = 3;
     pub const BITANGENT_LOCATION : IdVal = 4;
 
-    pub const DIFFUSE_TEXTURE_UNIT : IdVal = gl::TEXTURE0;
-    pub const DIFFUSE_SAMPLER_LOCATION : IdVal = 20;
+    pub const DIFFUSE_TEXTURE_UNIT : IdVal = 0;
+    pub const DIFFUSE_SAMPLER_LOCATION : UniformId = 20;
 
-    pub const SPECULAR_TEXTURE_UNIT : IdVal = gl::TEXTURE1;
-    pub const SPECULAR_SAMPLER_LOCATION : IdVal = 21;
+    pub const SPECULAR_TEXTURE_UNIT : IdVal = 1;
+    pub const SPECULAR_SAMPLER_LOCATION : UniformId = 21;
 
-    pub const NORMAL_TEXTURE_UNIT : IdVal = gl::TEXTURE2;
-    pub const NORMAL_SAMPLER_LOCATION : IdVal = 22;
+    pub const NORMAL_TEXTURE_UNIT : IdVal = 2;
+    pub const NORMAL_SAMPLER_LOCATION : UniformId = 22;
 
-    pub const USE_NORMALMPAP_FLAG : UniformId = 30;
+    pub const USE_NORMALMAP_FLAG : UniformId = 30;
     pub const USE_BLINN_FLAG : UniformId = 31;
 
 }
@@ -254,6 +254,7 @@ pub mod normal_mapped_mesh {
         index, position, normal, uv, tangent, bitangent
     });
 
+    #[derive(Debug)]
     pub struct Mesh {
         pub vao: IdVal,
         pub element_count: GLsizei,
@@ -314,18 +315,18 @@ pub mod normal_mapped_mesh {
                         config: packed vec2 array
                     },
                     (mesh.buffers.tangent) => {
-                        data: data.attributes.bitangents,
-                        target: array,
-                        access: static_draw,
-                        location: attrs::TANGENT_LOCATION,
-                        config: packed vec2 array
-                    },
-                    (mesh.buffers.bitangent) => {
                         data: data.attributes.tangents,
                         target: array,
                         access: static_draw,
+                        location: attrs::TANGENT_LOCATION,
+                        config: packed vec3 array
+                    },
+                    (mesh.buffers.bitangent) => {
+                        data: data.attributes.bitangents,
+                        target: array,
+                        access: static_draw,
                         location: attrs::BITANGENT_LOCATION,
-                        config: packed vec2 array
+                        config: packed vec3 array
                     }
                 );
             }
@@ -335,3 +336,4 @@ pub mod normal_mapped_mesh {
     }
 
 }
+

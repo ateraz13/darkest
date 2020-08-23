@@ -23,18 +23,32 @@ pub struct Render3D {
 
 type Mat4 = cgmath::Matrix4<f32>;
 
-#[derive(Debug)]
-pub struct TexMeshData {
-    pub resource: gpu::basic_mesh::Mesh,
-    pub model_matrix: Mat4,
-    pub normal_matrix: Mat4,
+pub mod mesh_data {
+
+    use super::gpu;
+    use super::Mat4;
+
+    #[derive(Debug)]
+    pub struct Basic {
+        pub resource: gpu::basic_mesh::Mesh,
+        pub model_matrix: Mat4,
+        pub normal_matrix: Mat4,
+    }
+
+    #[derive(Debug)]
+    pub struct NormalMapped {
+        pub resource: gpu::normal_mapped_mesh::Mesh,
+        pub model_matrix: Mat4,
+        pub normal_matrix: Mat4,
+    }
 }
 
 pub struct Pipeline3D {
     render: Render3D,
     projection_matrix: Mat4,
     view_matrix: Mat4,
-    tex_meshes: Vec<TexMeshData>,
+    basic_tex_meshes: Vec<mesh_data::Basic>,
+    normal_mapped_tex_meshes: Vec<mesh_data::NormalMapped>,
 }
 
 #[derive(Debug)]
@@ -66,7 +80,8 @@ impl Pipeline3D {
             },
             projection_matrix: Mat4::identity(),
             view_matrix: Mat4::identity(),
-            tex_meshes: vec![],
+            basic_tex_meshes: vec![],
+            normal_mapped_tex_meshes: vec![]
         };
 
         p3d.configure_gl_parameters();
@@ -91,16 +106,33 @@ impl Pipeline3D {
     }
 
     //FIXME: If this is slow than try something else
-    pub fn prepare_textured_meshes(&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::Basic, &mgl::attr::mesh3d::IndexedMesh)])
+    pub fn prepare_basic_textured_meshes(&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::Basic, &mgl::attr::mesh3d::IndexedMesh)])
     {
-        self.tex_meshes.clear();
-        self.tex_meshes.reserve_exact(data.len());
+        self.basic_tex_meshes.clear();
+        self.basic_tex_meshes.reserve_exact(data.len());
         for (lm, im) in data.iter() {
             let mut tm = gpu::basic_mesh::Mesh::from(*im);
             // println!("TEXTURED MESH: {:?}", tm);
             tm.textures.upload_all_textures(&lm);
 
-            self.tex_meshes.push(TexMeshData{
+            self.basic_tex_meshes.push(mesh_data::Basic {
+                resource: tm,
+                model_matrix: Mat4::identity(),
+                normal_matrix: Mat4::identity()
+            });
+        }
+    }
+
+    pub fn prepare_normal_mapped_textured_meshes (&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::NormalMapped, &mgl::attr::mesh3d::IndexedMesh)])
+    {
+        self.basic_tex_meshes.clear();
+        self.basic_tex_meshes.reserve_exact(data.len());
+        for (lm, im) in data.iter() {
+            let mut tm = gpu::normal_mapped_mesh::Mesh::from(*im);
+            // println!("TEXTURED MESH: {:?}", tm);
+            tm.textures.upload_all_textures(&lm);
+
+            self.normal_mapped_tex_meshes.push( mesh_data::NormalMapped {
                 resource: tm,
                 model_matrix: Mat4::identity(),
                 normal_matrix: Mat4::identity()
@@ -124,11 +156,13 @@ impl Pipeline3D {
     }
 
     pub fn update_model_matrix(&mut self, id: u32, mat: Mat4) {
-        self.tex_meshes[id as usize].model_matrix = mat
+        // FIXME: Create proper IDs
+        self.normal_mapped_tex_meshes[id as usize].model_matrix = mat
     }
 
     pub fn update_normal_matrix(&mut self, id: u32, mat: Mat4) {
-        self.tex_meshes[id as usize].normal_matrix = mat
+        // FIXME: Create proper IDs
+        self.normal_mapped_tex_meshes[id as usize].normal_matrix = mat
     }
 
     pub fn update_view_matrix(&mut self, mat: Mat4) {
@@ -140,7 +174,38 @@ impl Pipeline3D {
     }
 
     pub fn draw_textured_meshes(&self) {
-        for m in self.tex_meshes.iter() {
+
+        // disable normal maps
+        unsafe {
+            gl::Uniform1i(gpu::attrs::USE_NORMALMAP_FLAG, 0);
+            self.render.main_shader.set_active();
+            gl::Uniform1ui(gpu::attrs::DIFFUSE_SAMPLER_LOCATION,  gpu::attrs::DIFFUSE_TEXTURE_UNIT); // Texture Unit 0 : DIFFUSE
+            gl::Uniform1ui(gpu::attrs::SPECULAR_SAMPLER_LOCATION, gpu::attrs::SPECULAR_TEXTURE_UNIT); // Texture Unit 1 : SPECULAR
+            gl::Uniform1ui(gpu::attrs::NORMAL_SAMPLER_LOCATION,   gpu::attrs::NORMAL_TEXTURE_UNIT); // Texture Unit 2 : NORMAL
+        }
+
+        for m in self.basic_tex_meshes.iter() {
+            unsafe {
+                let mv = self.view_matrix*m.model_matrix;
+                let mvp = self.projection_matrix * mv;
+
+                gl::UniformMatrix4fv(1, 1, gl::FALSE, m.model_matrix.as_ptr());
+                gl::UniformMatrix4fv(2, 1, gl::FALSE, mv.as_ptr());
+                gl::UniformMatrix4fv(3, 1, gl::FALSE, self.projection_matrix.as_ptr());
+                gl::UniformMatrix4fv(4, 1, gl::FALSE, mvp.as_ptr());
+                gl::UniformMatrix4fv(5, 1, gl::FALSE, m.normal_matrix.as_ptr());
+
+            }
+
+            self.render.draw(&m.resource);
+        }
+
+        // enable normal maps
+        unsafe {
+            gl::Uniform1i(gpu::attrs::USE_NORMALMAP_FLAG, 1);
+        }
+
+        for m in self.normal_mapped_tex_meshes.iter() {
             unsafe {
                 let mv = self.view_matrix*m.model_matrix;
                 let mvp = self.projection_matrix * mv;
@@ -169,10 +234,37 @@ impl Draw<gpu::basic_mesh::Mesh> for Render3D {
 
         unsafe {
 
-            gl::ActiveTexture(gpu::attrs::DIFFUSE_TEXTURE_UNIT);
+            gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::DIFFUSE_TEXTURE_UNIT);
             gl::BindTexture(gl::TEXTURE_2D, e.textures.diffuse);
-            gl::ActiveTexture(gpu::attrs::SPECULAR_TEXTURE_UNIT);
+            gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::SPECULAR_TEXTURE_UNIT);
             gl::BindTexture(gl::TEXTURE_2D, e.textures.specular);
+
+            gl::BindVertexArray(e.vao);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, e.buffers.index);
+            gl::DrawElements(
+                gl::TRIANGLES,
+                e.element_count,
+                gl::UNSIGNED_INT,
+                0 as *const GLvoid
+            );
+
+        }
+    }
+
+}
+
+impl Draw<gpu::normal_mapped_mesh::Mesh> for Render3D {
+
+    fn draw(&self, e: &gpu::normal_mapped_mesh::Mesh) {
+
+        unsafe {
+
+            gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::DIFFUSE_TEXTURE_UNIT);
+            gl::BindTexture(gl::TEXTURE_2D, e.textures.diffuse);
+            gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::SPECULAR_TEXTURE_UNIT);
+            gl::BindTexture(gl::TEXTURE_2D, e.textures.specular);
+            gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::NORMAL_TEXTURE_UNIT);
+            gl::BindTexture(gl::TEXTURE_2D, e.textures.normal);
 
             gl::BindVertexArray(e.vao);
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, e.buffers.index);

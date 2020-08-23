@@ -20,17 +20,10 @@ layout (location = 30) uniform bool use_normalmap = false;
 
 flat out vec3 vert_normal;
 smooth out vec3 frag_position;
-out vec2 frag_uv;
-out vec3 eye_dir;
-
-out vec3 sun_dir_tanspace;
-out vec3 eye_dir_tanspace;
-out vec3 sun_dir;
+smooth out vec2 frag_uv;
 out mat3 tbn_mat;
 
 void main() {
-
-  sun_dir = (sun_pos - position.xyz);
 
   vert_normal = vec3(normal_mat * vec4(normal, 0));
   frag_uv = vec2(uv.x, 1.0-uv.y);
@@ -41,22 +34,21 @@ void main() {
   gl_Position =  mvp * vec4(position, 1.0);
   //
   vec3 pos_camspace = p4.xyz;
-  eye_dir = vec3(0, 0, 0) - pos_camspace;
+  // eye_dir = vec3(0, 0, 0) - pos_camspace;
 
   if(use_normalmap) {
+
     mat3 mv3 = mat3(modelview_mat);
     vec3 normal_camspace =  mv3 * normalize(normal);
     vec3 tangent_camspace =  mv3 * normalize(tangent);
     vec3 bitangent_camspace =  mv3 * normalize(bitangent);
 
-    mat3 tbn = transpose(mat3 (
+    tbn_mat = transpose(mat3 (
       tangent_camspace,
       bitangent_camspace,
       normal_camspace
     ));
 
-    sun_dir_tanspace = tbn * sun_dir;
-    eye_dir_tanspace = tbn * eye_dir;
   }
 
 }
