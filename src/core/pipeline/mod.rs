@@ -177,11 +177,11 @@ impl Pipeline3D {
 
         // disable normal maps
         unsafe {
-            gl::Uniform1i(gpu::attrs::USE_NORMALMAP_FLAG, 0);
+            gl::Uniform1ui(gpu::attrs::USE_NORMALMAP_FLAG, 0);
             self.render.main_shader.set_active();
-            gl::Uniform1ui(gpu::attrs::DIFFUSE_SAMPLER_LOCATION,  gpu::attrs::DIFFUSE_TEXTURE_UNIT); // Texture Unit 0 : DIFFUSE
-            gl::Uniform1ui(gpu::attrs::SPECULAR_SAMPLER_LOCATION, gpu::attrs::SPECULAR_TEXTURE_UNIT); // Texture Unit 1 : SPECULAR
-            gl::Uniform1ui(gpu::attrs::NORMAL_SAMPLER_LOCATION,   gpu::attrs::NORMAL_TEXTURE_UNIT); // Texture Unit 2 : NORMAL
+            gl::Uniform1i(gpu::attrs::DIFFUSE_SAMPLER_LOCATION,  gpu::attrs::DIFFUSE_TEXTURE_UNIT as i32); // Texture Unit 0 : DIFFUSE
+            gl::Uniform1i(gpu::attrs::SPECULAR_SAMPLER_LOCATION, gpu::attrs::SPECULAR_TEXTURE_UNIT as i32); // Texture Unit 1 : SPECULAR
+            gl::Uniform1i(gpu::attrs::NORMAL_SAMPLER_LOCATION,   gpu::attrs::NORMAL_TEXTURE_UNIT as i32); // Texture Unit 2 : NORMAL
         }
 
         for m in self.basic_tex_meshes.iter() {
@@ -202,7 +202,7 @@ impl Pipeline3D {
 
         // enable normal maps
         unsafe {
-            gl::Uniform1i(gpu::attrs::USE_NORMALMAP_FLAG, 1);
+            gl::Uniform1ui(gpu::attrs::USE_NORMALMAP_FLAG, 1);
         }
 
         for m in self.normal_mapped_tex_meshes.iter() {

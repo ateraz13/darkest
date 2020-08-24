@@ -102,15 +102,25 @@ impl IndexedMesh {
                 &uvs[indices[ i+2 ] as usize]
             );
 
-            let delta_pos1 = v2 - v1;
-            let delta_pos2 = v3 - v1;
+            let edge1 = v2 - v1;
+            let edge2 = v3 - v1;
 
             let delta_uv1 = uv2 - uv1;
             let delta_uv2 = uv3 - uv1;
 
-            let r = 1.0f32 / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
-            let tan = (delta_pos1 * delta_uv2.y - delta_pos2 * delta_uv1.y)*r;
-            let bitan = (delta_pos2 * delta_uv1.x - delta_pos1 * delta_uv2.x)*r;
+            let f = 1.0f32 / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
+
+            let tan = Vector3::new(
+                f * (delta_uv2.y * edge1.x - delta_uv1.y * edge2.x),
+                f * (delta_uv2.y * edge1.y - delta_uv1.y * edge2.y),
+                f * (delta_uv2.y * edge1.z - delta_uv1.y * edge2.z),
+            );
+
+            let bitan = Vector3::new(
+                f * (-delta_uv2.x * edge1.x - delta_uv1.x * edge2.x),
+                f * (-delta_uv2.x * edge1.y - delta_uv1.x * edge2.y),
+                f * (-delta_uv2.x * edge1.z - delta_uv1.x * edge2.z),
+            );
 
             for _ in 0 .. 3 {
                 tans.push(tan);

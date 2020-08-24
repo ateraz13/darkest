@@ -70,9 +70,6 @@ impl NormalMapped {
         upload_s3_texture(&lm.specular, attrs::SPECULAR_TEXTURE_UNIT,self.specular);
         upload_s3_texture(&lm.normal,  attrs::NORMAL_TEXTURE_UNIT, self.normal);
 
-        // upload_s3_texture(&lm.diffuse, gl::TEXTURE0, self.diffuse);
-        // upload_s3_texture(&lm.specular, gl::TEXTURE1, self.specular);
-        // upload_s3_texture(&lm.normal, gl::TEXTURE5, self.normal);
     }
 }
 

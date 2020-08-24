@@ -109,7 +109,8 @@ fn main () -> io::Result<()> {
                                     unsafe {gl::Uniform1i(core::pipeline::gpu::attrs::USE_BLINN_FLAG, 1);}
                                     enable_blinn = true;
                                 }
-                            }
+                            },
+
                             _ => {},
                         }
                     }
@@ -157,11 +158,6 @@ fn main () -> io::Result<()> {
         // Drawing code
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-
-            // gl::Uniform1i(20, 0); // Texture Unit 0 : DIFFUSE
-            // gl::Uniform1i(8, 1); // Texture Unit 1 : SPECULAR
-            // gl::Uniform1i(9, 2); // Texture Unit 1 : SPECULAR
-
         }
 
         p3d.update_projection_matrix(proj_mat.clone());

@@ -14,8 +14,7 @@ layout (location = 4) uniform mat4 mvp = mat4(1);
 layout (location = 5) uniform mat4 normal_mat = mat4(1);
 layout (location = 6) uniform float time;
 
-layout (location = 9) uniform vec3 sun_pos = vec3(0.0, 0.0, 0.0);
-
+layout (location = 9) uniform vec3 sun_pos;
 layout (location = 30) uniform bool use_normalmap = false;
 
 flat out vec3 vert_normal;
@@ -38,10 +37,9 @@ void main() {
 
   if(use_normalmap) {
 
-    mat3 mv3 = mat3(modelview_mat);
-    vec3 normal_camspace =  mv3 * normalize(normal);
-    vec3 tangent_camspace =  mv3 * normalize(tangent);
-    vec3 bitangent_camspace =  mv3 * normalize(bitangent);
+    vec3 normal_camspace =  normalize(vec3(modelview_mat * vec4(normal, 0.0)));
+    vec3 tangent_camspace =  normalize(vec3(modelview_mat * vec4(tangent, 0.0)));
+    vec3 bitangent_camspace = normalize(vec3(modelview_mat * vec4(bitangent, 0.0)));
 
     tbn_mat = transpose(mat3 (
       tangent_camspace,
