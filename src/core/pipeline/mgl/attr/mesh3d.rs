@@ -87,6 +87,8 @@ impl IndexedMesh {
         tans.reserve_exact(pos.len());
         bitans.reserve_exact(pos.len());
 
+        println!("POSITION COUNT: {}", pos.len());
+        println!("UV COUNT: {}", uvs.len());
 
         for i in (0 .. indices.len()).step_by(3) {
 
@@ -94,12 +96,16 @@ impl IndexedMesh {
                 &pos[indices[i] as usize],
                 &pos[indices[ i+1 ] as usize],
                 &pos[indices[ i+2 ] as usize]
+                // &pos[i], &pos[i+1], &pos[i+2]
             );
+
+            println!("I: {}", i);
 
             let (uv1, uv2, uv3) = (
                 &uvs[indices[i] as usize],
-                &uvs[indices[ i+1 ] as usize],
-                &uvs[indices[ i+2 ] as usize]
+                &uvs[indices[i+1] as usize],
+                &uvs[indices[i+2] as usize]
+                // &uvs[i], &uvs[i+1], &uvs[i+2]
             );
 
             let edge1 = v2 - v1;
@@ -108,7 +114,8 @@ impl IndexedMesh {
             let delta_uv1 = uv2 - uv1;
             let delta_uv2 = uv3 - uv1;
 
-            let f = 1.0f32 / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
+            let d = delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x;
+            let f = 1.0f32 / d;
 
             let tan = Vector3::new(
                 f * (delta_uv2.y * edge1.x - delta_uv1.y * edge2.x),

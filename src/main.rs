@@ -14,17 +14,18 @@ use crate::core::pipeline::mgl::s3tc;
 use cgmath::prelude::{ Matrix, SquareMatrix };
 use gl::types::*;
 
-extern "system" fn gl_error_cb(
+extern "system" fn gl_error_cb (
     _source : GLenum ,
     err_type : GLenum ,
     _id : GLuint ,
     severity : GLenum ,
     _length : GLsizei ,
     message: *const GLchar,
-    _user_param : *mut GLvoid)
+    _user_param : *mut GLvoid
+)
 {
     use std::ffi::CStr;
-    println!("GL CALLBACK: 0x{}, type: 0x{}, severity = 0x{}, message = {}",
+    println!("GL CALLBACK: {}, type: 0x{}, severity = 0x{}, message = {}",
              if err_type == gl::DEBUG_TYPE_ERROR { "** GL ERROR **"  } else { "" },
              err_type, severity, unsafe {CStr::from_ptr(message).to_str().unwrap()}
     );
@@ -57,15 +58,15 @@ fn main () -> io::Result<()> {
         }
     }).unwrap();
 
+    // Setup debug messaging
     unsafe {
-
         gl::Enable(gl::DEBUG_OUTPUT);
         gl::DebugMessageCallback(gl_error_cb, std::ptr::null());
-
     }
 
     {
-        let plane  = helpers::mesh3d::create_plane_with_tangents();
+        // let plane  = helpers::mesh3d::create_plane_with_tangents();
+        let plane = helpers::mesh3d::load_obj("./assets/cube.obj").pop().unwrap();
 
         p3d.activate_shader();
 
@@ -143,8 +144,10 @@ fn main () -> io::Result<()> {
         let model_mat  = cgmath::Matrix4::<f32>::from_translation(
             cgmath::Vector3::new( 0.0, 0.0, -2.0 ),
         );
+
+        let t = time.as_millis() as f32 / 1000.0 ;
         let view_mat = cgmath::Matrix4::<f32>::look_at(
-            cgmath::Point3::new( ( time.as_millis() as f32 / 1000.0 ).sin() * -1.0, 0.0, 0.0 ),
+            cgmath::Point3::new( 1.0 + t.sin() - t.cos(), 1.0 + t.sin() + t.cos(), 1.0 + 0.25 * t.sin() + t.cos() ),
             cgmath::Point3::new( 0.0, 0.0, -2.0 ),
             cgmath::Vector3::new( 0.0, 1.0, 0.0 ),
         );

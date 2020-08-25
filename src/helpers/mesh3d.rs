@@ -1,4 +1,5 @@
 use std::path::Path;
+use crate::core::pipeline::mgl::attr::mesh3d;
 
 use crate::core::pipeline::mgl;
 use crate::core::pipeline::mgl::s3tc;
@@ -85,17 +86,100 @@ pub fn create_plane_with_tangents() -> mgl::attr::mesh3d::IndexedMesh {
 }
 
 
-pub fn load_dds_basic_lightmaps<P: AsRef<Path>>(app: &app::AppCore, d: P, s: P) -> mgl::attr::mesh3d::lightmaps::Basic {
+pub fn load_dds_basic_lightmaps<P: AsRef<Path>>(app: &app::AppCore, d: P, s: P) -> mesh3d::lightmaps::Basic {
     mgl::attr::mesh3d::lightmaps::Basic {
             diffuse: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(d.as_ref()).unwrap()).unwrap(),
             specular: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(s.as_ref()).unwrap()).unwrap(),
     }
 }
 
-pub fn load_dds_normal_mapped_lightmaps<P: AsRef<Path>>(app: &app::AppCore, diff: P, spec: P, norm: P) -> mgl::attr::mesh3d::lightmaps::NormalMapped {
+pub fn load_dds_normal_mapped_lightmaps<P: AsRef<Path>>(app: &app::AppCore, diff: P, spec: P, norm: P) -> mesh3d::lightmaps::NormalMapped {
     mgl::attr::mesh3d::lightmaps::NormalMapped {
             diffuse: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(diff.as_ref()).unwrap()).unwrap(),
             specular: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(spec.as_ref()).unwrap()).unwrap(),
             normal: s3tc::Image::from_dds_buffer(app.buffer_loader.load_bytes(norm.as_ref()).unwrap()).unwrap(),
     }
+}
+
+
+struct MakeVector3Iter<'a, I: Iterator<Item = &'a f32>>{
+    iter: I,
+}
+
+impl<'a, I: Iterator<Item = &'a f32>> MakeVector3Iter<'a, I> {
+
+    fn from(i: I) -> Self  {
+        Self {
+            iter: i
+        }
+    }
+
+}
+
+impl<'a, I: Iterator<Item = &'a f32>> Iterator for MakeVector3Iter<'a, I> {
+    type Item = Vector3;
+
+    fn next(&mut self) -> Option<Vector3> {
+        Some( Vector3::new(
+            *self.iter.next()?,
+            *self.iter.next()?,
+            *self.iter.next()?
+        ))
+    }
+}
+
+struct MakeVector2Iter<'a, I: Iterator<Item = &'a f32>>{
+    iter: I,
+}
+
+impl<'a, I: Iterator<Item = &'a f32>> MakeVector2Iter<'a, I> {
+
+    fn from(i: I) -> Self  {
+        Self {
+            iter: i
+        }
+    }
+
+}
+
+impl<'a, I: Iterator<Item = &'a f32>> Iterator for MakeVector2Iter<'a, I> {
+    type Item = Vector2;
+
+    fn next(&mut self) -> Option<Vector2> {
+        Some( Vector2::new(
+            *self.iter.next()?,
+            *self.iter.next()?,
+        ))
+    }
+}
+
+
+pub fn load_obj<P: AsRef<Path>>( p: P ) -> Vec<mesh3d::IndexedMesh> {
+
+    use std::io;
+    use std::fs;
+
+    // let f = fs::File::open(p.as_ref()).unwrap();
+    // // let buf = io::BufReader::new(&f);
+
+    let (models, materials) = tobj::load_obj(p.as_ref(), true).unwrap();
+
+    models.iter().enumerate().map(|(i, model)| {
+        let mesh = &model.mesh;
+
+        let mut im = mesh3d::IndexedMesh {
+            attributes: mesh3d::VertexAttributes {
+                indices: mesh.indices.clone(),
+                positions: MakeVector3Iter::from(mesh.positions.iter()).collect(),
+                normals: MakeVector3Iter::from(mesh.normals.iter()).collect(),
+                uvs: MakeVector2Iter::from(mesh.texcoords.iter()).collect(),
+                tangents: vec![],
+                bitangents: vec![],
+            }
+        };
+
+        im.generate_tangents();
+        im
+
+    }).collect()
 }

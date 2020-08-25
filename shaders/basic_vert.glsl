@@ -28,7 +28,7 @@ void main() {
   frag_uv = vec2(uv.x, 1.0-uv.y);
 
   vec4 p4 = modelview_mat * vec4(position, 1.0);
-  frag_position = position.xyz / p4.w;
+  frag_position = 0.5 * position.xyz / p4.w;
 
   gl_Position =  mvp * vec4(position, 1.0);
   //

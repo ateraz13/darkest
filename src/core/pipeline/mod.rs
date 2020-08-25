@@ -210,9 +210,9 @@ impl Pipeline3D {
                 let mv = self.view_matrix*m.model_matrix;
                 let mvp = self.projection_matrix * mv;
 
-                gl::UniformMatrix4fv(1, 1, gl::FALSE, m.model_matrix.as_ptr());
+                // gl::UniformMatrix4fv(1, 1, gl::FALSE, m.model_matrix.as_ptr());
                 gl::UniformMatrix4fv(2, 1, gl::FALSE, mv.as_ptr());
-                gl::UniformMatrix4fv(3, 1, gl::FALSE, self.projection_matrix.as_ptr());
+                // gl::UniformMatrix4fv(3, 1, gl::FALSE, self.projection_matrix.as_ptr());
                 gl::UniformMatrix4fv(4, 1, gl::FALSE, mvp.as_ptr());
                 gl::UniformMatrix4fv(5, 1, gl::FALSE, m.normal_matrix.as_ptr());
 

@@ -7,8 +7,6 @@ build = "build.rs"
 
 [dependencies]
 gl = { path = "lib/gl" }
+sdl2 = "0.31.0"
 cgmath = "*"
-
-[dependencies.sdl2]
-version = "0.31.0"
-
+tobj = "*"
