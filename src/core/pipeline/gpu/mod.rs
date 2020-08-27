@@ -75,11 +75,22 @@ macro_rules! define_buffers {
                 $(println!("\t{} : {}", stringify!($other_fields), self.$other_fields);)+
                     println!("}}");
             }
+
+        }
+
+        impl Drop for $name {
+            fn drop (&mut self) {
+                unsafe {
+                    gl::DeleteBuffers((std::mem::size_of::<Self>()/std::mem::size_of::<IdVal>()) as GLsizei,
+                                      (&mut self.$first_field) as *mut GLuint);
+                }
+            }
         }
     }
-
-
 }
+
+
+
 
 
 #[allow(unused_macros)]

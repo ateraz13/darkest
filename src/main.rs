@@ -13,6 +13,11 @@ use crate::core::pipeline::mgl::s3tc;
 
 use cgmath::prelude::{ Matrix, SquareMatrix };
 use gl::types::*;
+use cgmath::prelude::*;
+
+
+type Matrix4 = cgmath::Matrix4<f32>;
+type Vector3 = cgmath::Vector3<f32>;
 
 extern "system" fn gl_error_cb (
     _source : GLenum ,
@@ -61,7 +66,7 @@ fn main () -> io::Result<()> {
     // Setup debug messaging
     unsafe {
         gl::Enable(gl::DEBUG_OUTPUT);
-        gl::DebugMessageCallback(gl_error_cb, std::ptr::null());
+        // gl::DebugMessageCallback(gl_error_cb, std::ptr::null());
     }
 
     {
@@ -142,25 +147,41 @@ fn main () -> io::Result<()> {
         }
 
         let model_mat  = cgmath::Matrix4::<f32>::from_translation(
-            cgmath::Vector3::new( 0.0, 0.0, -2.0 ),
+            cgmath::Vector3::new( 0.0, 0.0, 0.0 ),
         );
 
-        let t = time.as_millis() as f32 / 1000.0 ;
-        let view_mat = cgmath::Matrix4::<f32>::look_at(
-            cgmath::Point3::new( 1.0 + t.sin() - t.cos(), 1.0 + t.sin() + t.cos(), 1.0 + 0.25 * t.sin() + t.cos() ),
-            cgmath::Point3::new( 0.0, 0.0, -2.0 ),
+
+        let t = time.as_millis() as f32 / 1000.0;
+        let camera_dist = 2.0;
+        let camera_pos = cgmath::Point3::<f32>::new(
+            camera_dist * ( t.cos() - t.sin() ),
+            camera_dist * ( (t * 0.5).cos() - (t * 0.5).sin() ),
+            camera_dist *  ( t.sin() + t.cos() )
+        );
+         
+        let view_center = cgmath::Point3::new( 0.0, 0.0, 0.0 );
+
+        // let view_mat = Matrix4::from_translation(
+        //     Vector3::new(1.0, 1.0, 5.0)
+        // ).invert().unwrap();
+
+        let view_mat = cgmath::Matrix4::<f32>::look_at (
+            camera_pos, view_center,
             cgmath::Vector3::new( 0.0, 1.0, 0.0 ),
         );
+
         let model_view_mat = view_mat * model_mat;
-        let normal_mat = model_view_mat.invert().unwrap().transpose();
+        let normal_mat = model_mat.invert().unwrap().transpose();
         let proj_mat  = cgmath::perspective(
-            cgmath::Deg(90.0), 4.0/3.0, 1.0, 1000.0
+            cgmath::Deg(75.0), 4.0/3.0, 0.1, 1000.0
         );
+
         let _mvp = proj_mat * view_mat * model_mat;
 
         // Drawing code
         unsafe {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            gl::Uniform3fv(10, 1, camera_pos.as_ptr());
         }
 
         p3d.update_projection_matrix(proj_mat.clone());

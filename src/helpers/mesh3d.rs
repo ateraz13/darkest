@@ -172,7 +172,9 @@ pub fn load_obj<P: AsRef<Path>>( p: P ) -> Vec<mesh3d::IndexedMesh> {
                 indices: mesh.indices.clone(),
                 positions: MakeVector3Iter::from(mesh.positions.iter()).collect(),
                 normals: MakeVector3Iter::from(mesh.normals.iter()).collect(),
-                uvs: MakeVector2Iter::from(mesh.texcoords.iter()).collect(),
+                uvs: MakeVector2Iter::from(mesh.texcoords.iter())
+                    .map(|v| Vector2::new(v.x, 1.0-v.y))
+                    .collect(),
                 tangents: vec![],
                 bitangents: vec![],
             }
