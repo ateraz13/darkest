@@ -154,7 +154,7 @@ impl<'a, I: Iterator<Item = &'a f32>> Iterator for MakeVector2Iter<'a, I> {
 }
 
 
-pub fn load_obj<P: AsRef<Path>>( p: P ) -> Vec<mesh3d::IndexedMesh> {
+pub fn load_obj<P: AsRef<Path>>( app: &app::AppCore, p: P ) -> Vec<mesh3d::IndexedMesh> {
 
     use std::io;
     use std::fs;
@@ -162,7 +162,12 @@ pub fn load_obj<P: AsRef<Path>>( p: P ) -> Vec<mesh3d::IndexedMesh> {
     // let f = fs::File::open(p.as_ref()).unwrap();
     // // let buf = io::BufReader::new(&f);
 
-    let (models, materials) = tobj::load_obj(p.as_ref(), true).unwrap();
+    let root = p.as_ref().parent();
+    let (models, _materials) = tobj::load_obj_buf(&mut app.buffer_loader.prepare_buf_reader(p.as_ref()).unwrap(), true, |f| {
+        let mut p = std::path::PathBuf::from(root.as_ref().unwrap().to_str().unwrap());
+        p.push(f);
+        tobj::load_mtl_buf(&mut app.buffer_loader.prepare_buf_reader(&p).unwrap())
+    }).unwrap();
 
     models.iter().enumerate().map(|(i, model)| {
         let mesh = &model.mesh;

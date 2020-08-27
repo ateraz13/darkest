@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::Read;
 use std::string::String;
 use std::ffi::CString;
+use std::io::{ BufRead, BufReader };
 
 pub struct BufferLoader {
     root: PathBuf,
@@ -126,4 +127,24 @@ impl BufferLoader {
         Ok(data)
     }
 
+    pub fn prepare_buf_reader(&self, file_path: &Path) -> BufferLoaderResult<Box<dyn BufRead>> {
+
+        let full_path = prepare_full_path!(self.root.clone(), file_path);
+
+        let mut file = {
+            let f = File::open(full_path);
+
+            match f {
+                Err(e) => {
+                    let mut pb = PathBuf::new();
+                    pb.push(file_path);
+                    return buffer_load_err(Some(pb), e);
+                },
+                Ok(file) => file
+            }
+        };
+
+
+        Ok(Box::new(BufReader::new(file)))
+    }
 }

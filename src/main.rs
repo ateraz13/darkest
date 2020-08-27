@@ -71,7 +71,7 @@ fn main () -> io::Result<()> {
 
     {
         // let plane  = helpers::mesh3d::create_plane_with_tangents();
-        let plane = helpers::mesh3d::load_obj("./assets/cube.obj").pop().unwrap();
+        let plane = helpers::mesh3d::load_obj(&app, "./assets/cube.obj").pop().unwrap();
 
         p3d.activate_shader();
 
