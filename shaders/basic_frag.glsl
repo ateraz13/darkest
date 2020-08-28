@@ -12,8 +12,8 @@ layout (location = 5) uniform mat4 mvp_mat = mat4(1);
 layout (location = 6) uniform mat4 normal_mat = mat4(1);
 layout (location = 50) uniform float time;
 
-layout (location = 9) uniform vec3 sun_pos = vec3(0.0, 5.0, 5.0);
-layout (location = 10) uniform vec3 view_pos = vec3(0.0, 0.0, 1.0);
+layout (location = 9) uniform vec4 sun_dir = vec4(0.1, -1.0, -0.5, 0.0);
+layout (location = 10) uniform vec4 view_pos = vec4(0.0, 0.0, 1.0, 1.0);
 
 layout(location = 11) uniform float sun_intensity = 1.0;
 layout(location = 12) uniform float specular_power = 8.0;
@@ -43,35 +43,30 @@ uniform Sun sun = Sun (
         vec3(1.0, 1.0, 1.0)
         );
 
-smooth in vec3 vert_normal;
-smooth in vec3 frag_position;
+smooth in vec4 vert_normal;
+smooth in vec4  frag_position;
 smooth in vec2 frag_uv;
-in mat3 tbn_mat;
-
-vec3 pos_view_space(vec3 vin) {
-        return vec3(modelview_mat * vec4(vin, 1.0));
-}
+in mat4 tbn_mat;
 
 void main () {
 
-        vec3 frag_normal = tbn_mat * vert_normal;
-        vec3 light_pos = sun_pos;
+        vec4 frag_normal = tbn_mat * vert_normal;
+        // vec3 light_pos = sun_pos;
         vec3 diffuse, specular, ambient;
 
-
-        vec3 view_dir =   normalize(view_pos - frag_position);
-        vec3 light_dir =  normalize(light_pos - frag_position);
+        vec4 view_dir =   normalize(view_pos - frag_position);
+        vec4 light_dir =  normalize(-sun_dir);//normalize(light_pos - frag_position);
 
         if(dot(vert_normal, light_dir) > 0.0) {
 
                 view_dir = tbn_mat * view_dir;
                 light_dir = tbn_mat * light_dir;
 
-                float sun_dist2 = pow(length(light_dir), 2);
+                // float sun_dist2 = pow(length(light_dir), 2);
 
                 if(use_normalmap) {
 
-                        frag_normal = texture(normal_texture, frag_uv).rgb;
+                        frag_normal = vec4( texture(normal_texture, frag_uv).rgb, 0.0 );
                         frag_normal = frag_normal * 2.0 - 1.0;
                         frag_normal = normalize( tbn_mat * frag_normal );
 
@@ -82,12 +77,12 @@ void main () {
 
                 if(use_blinn) {
                         // view_dir = normalize(view_pos -  frag_position);
-                        vec3 halfway_dir = normalize(light_dir - view_dir);
+                        vec4 halfway_dir = normalize(light_dir - view_dir);
                         specular_scalar = pow(max(dot(frag_normal, view_dir), 0.0), specular_power);
 
                 } else {
 
-                        vec3 reflect_dir = reflect(light_dir, frag_normal);
+                        vec4 reflect_dir = reflect(light_dir, frag_normal);
                         specular_scalar = pow(clamp(dot(view_dir, reflect_dir), 0.0, 1.0), specular_power/4.0);
 
                 }

@@ -15,36 +15,32 @@ layout (location = 5) uniform mat4 mvp_mat = mat4(1);
 layout (location = 6) uniform mat4 normal_mat = mat4(1);
 layout (location = 50) uniform float time;
 
-layout (location = 9) uniform vec3 sun_pos;
+layout (location = 9) uniform vec4 sun_dir;
 layout (location = 30) uniform bool use_normalmap = false;
 
-smooth out vec3 vert_normal;
-smooth out vec3 frag_position;
+smooth out vec4 vert_normal;
+smooth out vec4 frag_position;
 smooth out vec2 frag_uv;
-out mat3 tbn_mat;
+out mat4 tbn_mat;
 
 void main() {
 
-  vert_normal = normalize(vec3(normal_mat * vec4(normal, 0)));
+  vert_normal = normalize(vec4(normal, 0));
   frag_uv = vec2(uv.x, uv.y);
-
-  vec4 p4 = model_mat * vec4(position, 1.0);
-  frag_position = vec3(p4); //position.xyz / p4.w;
-
-  // vec3 pos_camspace = p4.xyz;
-  // eye_dir = vec3(0, 0, 0) - pos_camspace;
+  frag_position = model_mat * vec4(position, 1.0);
 
   if(use_normalmap) {
 
-    vec3 tangent_viewspace = normalize(vec3(model_mat * vec4(tangent, 0.0)));
-    vec3 bitangent_viewspace = normalize(vec3(model_mat * vec4(bitangent, 0.0)));
-    vec3 normal_viewspace =  normalize(vec3(model_mat * vec4(normal, 0.0)));
+    vec4 tangent_viewspace = normalize(model_mat * vec4(tangent, 0.0));
+    vec4 bitangent_viewspace = normalize(model_mat * vec4(bitangent, 0.0));
+    vec4 normal_viewspace =  normalize(model_mat * vec4(normal, 0.0));
 
-    tbn_mat = (mat3 (
+    tbn_mat = mat4 (
       tangent_viewspace,
       bitangent_viewspace,
-      normal_viewspace
-    ));
+      normal_viewspace,
+      0, 0, 0, 1
+    );
 
   }
 
