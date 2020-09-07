@@ -39,7 +39,7 @@ impl AppCore {
 
         let gl_attr = sdl_video.gl_attr();
         gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
-        gl_attr.set_context_version(3, 3);
+        gl_attr.set_context_version(4, 5);
         gl_attr.set_context_flags()
             .debug().set();
 

@@ -18,31 +18,35 @@ layout (location = 50) uniform float time;
 layout (location = 9) uniform vec4 sun_dir;
 layout (location = 30) uniform bool use_normalmap = false;
 
-smooth out vec4 vert_normal;
-smooth out vec4 frag_position;
+smooth out vec3 vert_normal;
+smooth out vec3 frag_pos;
 smooth out vec2 frag_uv;
-out mat4 tbn_mat;
+out mat3 tbn_mat;
 
 void main() {
 
-  vert_normal = normalize(vec4(normal, 0));
-  frag_uv = vec2(uv.x, uv.y);
-  frag_position = model_mat * vec4(position, 1.0);
+    vert_normal = normalize( mat3( model_mat ) * (normal) );
+    frag_uv = vec2(uv.x, uv.y);
+    frag_pos = vec3( model_mat * vec4(position, 1.0) );
 
-  if(use_normalmap) {
+    if(use_normalmap) {
+        mat3 mv3 = mat3(modelview_mat);
+        vec3 tangent_viewspace = mv3 * tangent;
+        vec3 bitangent_viewspace = mv3 * bitangent;
+        vec3 normal_viewspace = mv3 * normal;
 
-    vec4 tangent_viewspace = normalize(model_mat * vec4(tangent, 0.0));
-    vec4 bitangent_viewspace = normalize(model_mat * vec4(bitangent, 0.0));
-    vec4 normal_viewspace =  normalize(model_mat * vec4(normal, 0.0));
+        tbn_mat = mat3(
+           1, 0, 0,
+           0, 1, 0,
+           0, 0, 1
+        );
 
-    tbn_mat = mat4 (
-      tangent_viewspace,
-      bitangent_viewspace,
-      normal_viewspace,
-      0, 0, 0, 1
-    );
+        // tbn_mat = transpose( mat3 (
+        //     tangent_viewspace,
+        //     bitangent_viewspace,
+        //     normal_viewspace
+        // ));
+    }
 
-  }
-
-  gl_Position = mvp_mat * vec4(position, 1.0);
+    gl_Position = mvp_mat * vec4(position, 1.0);
 }

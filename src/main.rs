@@ -171,7 +171,8 @@ fn main () -> io::Result<()> {
         );
 
         let model_view_mat = view_mat * model_mat;
-        let normal_mat = model_mat.invert().unwrap().transpose();
+        let normal_mat = model_view_mat.invert().unwrap().transpose();
+
         let proj_mat  = cgmath::perspective(
             cgmath::Deg(75.0), 4.0/3.0, 0.1, 1000.0
         );
@@ -184,8 +185,8 @@ fn main () -> io::Result<()> {
             gl::Uniform3fv(10, 1, camera_pos.as_ptr());
         }
 
-        p3d.update_projection_matrix(proj_mat.clone());
-        p3d.update_view_matrix(view_mat.clone());
+        p3d.update_projection_matrix(proj_mat);
+        p3d.update_view_matrix(view_mat);
         p3d.update_model_matrix(0, model_mat);
         p3d.update_normal_matrix(0, normal_mat);
 
