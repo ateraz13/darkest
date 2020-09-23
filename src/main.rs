@@ -152,11 +152,11 @@ fn main () -> io::Result<()> {
 
 
         let t = time.as_millis() as f32 / 1000.0;
-        let camera_dist = 2.0;
+        let camera_dist = 3.0;
         let camera_pos = cgmath::Point3::<f32>::new(
-            camera_dist * ( t.cos() - t.sin() ),
-            camera_dist * ( (t * 0.5).cos() - (t * 0.5).sin() ),
-            camera_dist *  ( t.sin() + t.cos() )
+            camera_dist * t.sin(),
+            camera_dist * t.sin() - t.cos(),
+            camera_dist *  t.cos()
         );
          
         let view_center = cgmath::Point3::new( 0.0, 0.0, 0.0 );
@@ -171,7 +171,8 @@ fn main () -> io::Result<()> {
         );
 
         let model_view_mat = view_mat * model_mat;
-        let normal_mat = model_view_mat.invert().unwrap().transpose();
+        let normal_mat = model_mat.invert().unwrap().transpose();
+        // let normal_mat = model_view_mat.invert().unwrap().transpose();
 
         let proj_mat  = cgmath::perspective(
             cgmath::Deg(75.0), 4.0/3.0, 0.1, 1000.0
