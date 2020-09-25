@@ -1,4 +1,5 @@
 use crate::resource;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum InitError {
@@ -17,8 +18,13 @@ pub struct AppCore {
 }
 
 pub struct AppConfig {
+    pub args: Arguments,
     pub window_size: (u32, u32),
     pub window_title: String,
+}
+
+pub struct Arguments {
+    pub game_dir: Option<PathBuf>,
 }
 
 impl AppCore {
@@ -62,12 +68,21 @@ impl AppCore {
             |e| InitError::SDL2(e)
         );
 
+        // Load OpenGL function pointers
         let _gl = gl::load_with(|s| sdl_video.gl_get_proc_address(s) as *const std::os::raw::c_void);
 
-        let buf_loader = unwrap_or_fail!(
-            resource::BufferLoader::relative_to_exe(),
-            |e| InitError::BufferLoader(format!("Buffer loader failed init: {:?}", e))
-        );
+        // Prepare buffer loader we default to relative path from executable
+        let buf_loader = if let Some(p) = config.args.game_dir {
+             unwrap_or_fail!(
+                resource::BufferLoader::with_root(p),
+                |e| InitError::BufferLoader(format!("Buffer loader failed init: {:?}", e))
+            )
+        } else {
+             unwrap_or_fail!(
+                resource::BufferLoader::relative_to_exe(),
+                |e| InitError::BufferLoader(format!("Buffer loader failed init: {:?}", e))
+            )
+        };
 
         Ok ( Self {
             sdl: sdl,

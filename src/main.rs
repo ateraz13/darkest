@@ -7,9 +7,11 @@ mod helpers;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::io;
+use std::path::PathBuf;
 
 use crate::core::pipeline::Pipeline3D;
 use crate::core::pipeline::mgl::s3tc;
+pub use crate::core::app;
 
 use cgmath::prelude::{ Matrix, SquareMatrix };
 use gl::types::*;
@@ -37,11 +39,43 @@ extern "system" fn gl_error_cb (
 
 }
 
+
+fn process_args() -> app::Arguments {
+
+    let mut cmd_args = std::env::args();
+
+    let mut args = app::Arguments {
+        game_dir: None,
+    };
+
+    while let Some(arg) = cmd_args.next() {
+        match arg.as_str() {
+            "-d" | "--game-dir" => {
+                if let Some(path) = cmd_args.next() {
+                    let p = PathBuf::from(path);
+                    if ! p.exists() {
+                        panic!("Path specified for game directory does not exist!");
+                    }
+                    args.game_dir = Some(p);
+                } else {
+                    panic!("No path specified for game directory!");
+                }
+            }
+            _ => {
+                println!("Unexpected command line arguments: {}", arg);
+            }
+        }
+    }
+
+    args
+}
+
 fn main () -> io::Result<()> {
 
-    pub use crate::core::app;
+    let app_args = process_args();
 
     let app_cfg = app::AppConfig {
+        args: app_args,
         window_size: (1024, 768),
         window_title: ("darkest v0.1.0".to_owned())
     };
