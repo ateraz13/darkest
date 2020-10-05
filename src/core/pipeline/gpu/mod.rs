@@ -31,6 +31,18 @@ pub mod attrs {
     pub const USE_NORMALMAP_FLAG : UniformId = 30;
     pub const USE_BLINN_FLAG : UniformId = 31;
 
+    pub mod uniforms {
+
+        pub type UniformId = gl::types::GLint;
+
+        pub const MODEL_MAT_LOCATION : UniformId = 1;
+        pub const VIEW_MAT_LOCATION : UniformId = 2;
+        pub const MODELVIEW_MAT_LOCATION : UniformId = 3;
+        pub const PROJECTION_MAT_LOCATION : UniformId = 4;
+        pub const MVP_MAT_LOCATION : UniformId = 5;
+        pub const NORMAL_MAT_LOCATION : UniformId = 6;
+    }
+
 }
 
 macro_rules! define_buffers {

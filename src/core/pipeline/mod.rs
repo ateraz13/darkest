@@ -1,7 +1,6 @@
 pub mod mgl;
 pub mod gpu;
 
-
 use crate::resource::BufferLoaderError;
 use crate::core::app;
 use crate::core::pipeline::mgl::shader::ShaderProgram;
@@ -205,17 +204,19 @@ impl Pipeline3D {
             gl::Uniform1ui(gpu::attrs::USE_NORMALMAP_FLAG, 1);
         }
 
+        pub use gpu::attrs::uniforms;
+
         for m in self.normal_mapped_tex_meshes.iter() {
             unsafe {
                 let mv = self.view_matrix*m.model_matrix;
                 let mvp = self.projection_matrix * mv;
 
-                gl::UniformMatrix4fv(1, 1, gl::FALSE, m.model_matrix.as_ptr());
-                gl::UniformMatrix4fv(2, 1, gl::FALSE, self.view_matrix.as_ptr());
-                gl::UniformMatrix4fv(3, 1, gl::FALSE, mv.as_ptr());
-                gl::UniformMatrix4fv(4, 1, gl::FALSE, self.projection_matrix.as_ptr());
-                gl::UniformMatrix4fv(5, 1, gl::FALSE, mvp.as_ptr());
-                gl::UniformMatrix4fv(6, 1, gl::FALSE, m.normal_matrix.as_ptr());
+                gl::UniformMatrix4fv(uniforms::MODEL_MAT_LOCATION, 1, gl::FALSE, m.model_matrix.as_ptr());
+                gl::UniformMatrix4fv(uniforms::VIEW_MAT_LOCATION, 1, gl::FALSE, self.view_matrix.as_ptr());
+                gl::UniformMatrix4fv(uniforms::MODELVIEW_MAT_LOCATION, 1, gl::FALSE, mv.as_ptr());
+                gl::UniformMatrix4fv(uniforms::PROJECTION_MAT_LOCATION, 1, gl::FALSE, self.projection_matrix.as_ptr());
+                gl::UniformMatrix4fv(uniforms::MVP_MAT_LOCATION, 1, gl::FALSE, mvp.as_ptr());
+                gl::UniformMatrix4fv(uniforms::NORMAL_MAT_LOCATION, 1, gl::FALSE, m.normal_matrix.as_ptr());
 
                 self.render.main_shader.set_active();
             }
