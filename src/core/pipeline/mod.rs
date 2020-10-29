@@ -16,6 +16,45 @@ use cgmath::prelude::{ Matrix, SquareMatrix };
 // and also enable us to replace un-used resources with new ones without
 // reallocation.
 
+pub mod resource {
+    cenum::enumerate_vals! {
+        type ResourceType = u8;
+        TEXTURED_MESH, NORMAL_MAPPED_MESH
+    }
+
+    // Upper bits 8-bits are resource type identifier
+    #[derive(Debug, Clone, Copy)]
+    pub struct ResourceID (u32);
+
+    impl ResourceID {
+        const U32_MAX : u32 =  u32::MAX;
+        const U8_MAX : u8 = u8::MAX;
+        const TYPE_PART_MASK: u32 = (ResourceID::U8_MAX as u32) << 24;
+        const ID_PART_MASK: u32 = ResourceID::TYPE_PART_MASK ^ ResourceID::U32_MAX;
+
+        pub fn new(rc_type: ResourceType, uid: u32) -> Self {
+
+            if ( uid & Self::TYPE_PART_MASK ) != 0 {
+                panic!("Invalid ResourceID created! (ID exceeds 24-bit bounds)");
+            }
+
+            // Uppper 8 bits identify resource type the rest is a unique identifier
+            Self( (rc_type.0 as u32) << 24 & (uid | ResourceID::TYPE_PART_MASK) )
+        }
+
+        pub fn get_type(&self) -> ResourceType {
+            ResourceType(( self.0 >> 24 ) as u8)
+        }
+
+        pub fn as_index(&self) -> usize {
+            ( Self::ID_PART_MASK & self.0 ) as usize
+        }
+
+    }
+}
+
+use resource::ResourceID;
+
 pub struct Render3D {
     main_shader: ShaderProgram,
 }
@@ -105,31 +144,49 @@ impl Pipeline3D {
     }
 
     //FIXME: If this is slow than try something else
-    pub fn prepare_basic_textured_meshes(&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::Basic, &mgl::attr::mesh3d::IndexedMesh)])
+    pub fn prepare_basic_textured_meshes(&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::Basic, &mgl::attr::mesh3d::IndexedMesh)]) -> Vec<ResourceID>
     {
+        let mut ids : Vec<ResourceID> = vec![];
+        ids.reserve(data.len());
+
         self.basic_tex_meshes.clear();
         self.basic_tex_meshes.reserve_exact(data.len());
         for (lm, im) in data.iter() {
             let mut tm = gpu::basic_mesh::Mesh::from(*im);
-            // println!("TEXTURED MESH: {:?}", tm);
+            // println!("TEXTURED MESH CREATED: {:?}", tm);
             tm.textures.upload_all_textures(&lm);
+
+            ids.push(ResourceID::new (
+                resource::TEXTURED_MESH,
+                self.basic_tex_meshes.len() as u32)
+            );
 
             self.basic_tex_meshes.push(mesh_data::Basic {
                 resource: tm,
                 model_matrix: Mat4::identity(),
                 normal_matrix: Mat4::identity()
             });
+
         }
+        ids
     }
 
-    pub fn prepare_normal_mapped_textured_meshes (&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::NormalMapped, &mgl::attr::mesh3d::IndexedMesh)])
+    pub fn prepare_normal_mapped_textured_meshes (&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::NormalMapped, &mgl::attr::mesh3d::IndexedMesh)]) -> Vec<ResourceID>
     {
+        let mut ids : Vec<ResourceID> = vec![];
+        ids.reserve(data.len());
+
         self.basic_tex_meshes.clear();
         self.basic_tex_meshes.reserve_exact(data.len());
         for (lm, im) in data.iter() {
             let mut tm = gpu::normal_mapped_mesh::Mesh::from(*im);
-            // println!("TEXTURED MESH: {:?}", tm);
+            // println!("NORMAL MAPPED MESH CREATED: {:?}", tm);
             tm.textures.upload_all_textures(&lm);
+
+            ids.push(ResourceID::new (
+                resource::NORMAL_MAPPED_MESH,
+                self.basic_tex_meshes.len() as u32)
+            );
 
             self.normal_mapped_tex_meshes.push( mesh_data::NormalMapped {
                 resource: tm,
@@ -137,6 +194,8 @@ impl Pipeline3D {
                 normal_matrix: Mat4::identity()
             });
         }
+
+        ids
     }
 
     fn load_and_compile_shader(app: &app::AppCore) -> Result<ShaderProgram, InitError> {
@@ -154,14 +213,28 @@ impl Pipeline3D {
         Ok(mgl::shader::ShaderProgram::from_shaders(&[vert_shader, frag_shader])?)
     }
 
-    pub fn update_model_matrix(&mut self, id: u32, mat: Mat4) {
-        // FIXME: Create proper IDs
-        self.normal_mapped_tex_meshes[id as usize].model_matrix = mat
+    pub fn update_model_matrix(&mut self, id: ResourceID, mat: Mat4) {
+        match id.get_type() {
+            resource::TEXTURED_MESH => {
+                self.basic_tex_meshes[id.as_index()].model_matrix = mat
+            },
+            resource::NORMAL_MAPPED_MESH => {
+                self.normal_mapped_tex_meshes[id.as_index()].model_matrix = mat
+            },
+            _ => {}
+        }
     }
 
-    pub fn update_normal_matrix(&mut self, id: u32, mat: Mat4) {
-        // FIXME: Create proper IDs
-        self.normal_mapped_tex_meshes[id as usize].normal_matrix = mat
+    pub fn update_normal_matrix(&mut self, id: ResourceID, mat: Mat4) {
+        match id.get_type() {
+            resource::TEXTURED_MESH => {
+                self.basic_tex_meshes[id.as_index()].normal_matrix = mat
+            },
+            resource::NORMAL_MAPPED_MESH => {
+                self.normal_mapped_tex_meshes[id.as_index()].normal_matrix = mat
+            },
+            _ => {}
+        }
     }
 
     pub fn update_view_matrix(&mut self, mat: Mat4) {

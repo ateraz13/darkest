@@ -1,4 +1,7 @@
 extern crate cgmath;
+#[macro_use]
+extern crate cenum;
+
 
 mod core;
 mod resource;
@@ -72,6 +75,8 @@ fn process_args() -> app::Arguments {
 
 fn main () -> io::Result<()> {
 
+    use std::clone::Clone;
+
     let app_args = process_args();
 
     let app_cfg = app::AppConfig {
@@ -103,20 +108,21 @@ fn main () -> io::Result<()> {
         // gl::DebugMessageCallback(gl_error_cb, std::ptr::null());
     }
 
-    {
-        // let plane  = helpers::mesh3d::create_plane_with_tangents();
-        let plane = helpers::mesh3d::load_obj(&app, "./assets/cube.obj").pop().unwrap();
+    let cube_id = {
 
+        let cube = helpers::mesh3d::load_obj(&app, "./assets/cube.obj").pop().unwrap();
         p3d.activate_shader();
 
         let light_maps = helpers::mesh3d::load_dds_normal_mapped_lightmaps (
             &app, "assets/diff.dds", "assets/spec.dds", "assets/norm.dds"
         );
 
-        p3d.prepare_normal_mapped_textured_meshes(&[
-            ( &light_maps, &plane )
+        let ids = p3d.prepare_normal_mapped_textured_meshes(&[
+            ( &light_maps, &cube )
         ]);
-    }
+
+        ids[0].clone()
+    };
 
     unsafe {
         gl::ClearColor(0.12, 0.0, 0.20, 1.0);
@@ -222,8 +228,8 @@ fn main () -> io::Result<()> {
 
         p3d.update_projection_matrix(proj_mat);
         p3d.update_view_matrix(view_mat);
-        p3d.update_model_matrix(0, model_mat);
-        p3d.update_normal_matrix(0, normal_mat);
+        p3d.update_model_matrix(cube_id, model_mat);
+        p3d.update_normal_matrix(cube_id, normal_mat);
 
         p3d.draw_textured_meshes();
 
