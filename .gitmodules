@@ -1,0 +1,3 @@
+[submodule "cenum"]
+	path = lib/cenum
+	url = ./lib/cenum/
