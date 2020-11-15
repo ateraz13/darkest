@@ -19,7 +19,7 @@ use cgmath::prelude::{ Matrix, SquareMatrix };
 pub mod resource {
     cenum::enumerate_vals! {
         type ResourceType = u8;
-        TEXTURED_MESH, NORMAL_MAPPED_MESH
+        TEXTURED_MESH = 24, NORMAL_MAPPED_MESH
     }
 
     // Upper bits 8-bits are resource type identifier
@@ -29,7 +29,7 @@ pub mod resource {
     impl ResourceID {
         const U32_MAX : u32 =  u32::MAX;
         const U8_MAX : u8 = u8::MAX;
-        const TYPE_PART_MASK: u32 = (ResourceID::U8_MAX as u32) << 24;
+        const TYPE_PART_MASK: u32 = (u8::MAX as u32) << 24;
         const ID_PART_MASK: u32 = ResourceID::TYPE_PART_MASK ^ ResourceID::U32_MAX;
 
         pub fn new(rc_type: ResourceType, uid: u32) -> Self {
@@ -39,7 +39,7 @@ pub mod resource {
             }
 
             // Uppper 8 bits identify resource type the rest is a unique identifier
-            Self( (rc_type.0 as u32) << 24 & (uid | ResourceID::TYPE_PART_MASK) )
+            Self( ( (rc_type.0 as u32) << 24) | (uid ) )
         }
 
         pub fn get_type(&self) -> ResourceType {
@@ -47,7 +47,7 @@ pub mod resource {
         }
 
         pub fn as_index(&self) -> usize {
-            ( Self::ID_PART_MASK & self.0 ) as usize
+            ( Self::ID_PART_MASK & self.0) as usize
         }
 
     }
@@ -151,15 +151,15 @@ impl Pipeline3D {
 
         self.basic_tex_meshes.clear();
         self.basic_tex_meshes.reserve_exact(data.len());
-        for (lm, im) in data.iter() {
+        for (i, (lm, im)) in data.iter().enumerate() {
             let mut tm = gpu::basic_mesh::Mesh::from(*im);
             // println!("TEXTURED MESH CREATED: {:?}", tm);
             tm.textures.upload_all_textures(&lm);
 
-            ids.push(ResourceID::new (
+            ids.push( ResourceID::new (
                 resource::TEXTURED_MESH,
-                self.basic_tex_meshes.len() as u32)
-            );
+                i as u32
+            ));
 
             self.basic_tex_meshes.push(mesh_data::Basic {
                 resource: tm,
@@ -178,16 +178,19 @@ impl Pipeline3D {
 
         self.basic_tex_meshes.clear();
         self.basic_tex_meshes.reserve_exact(data.len());
-        for (lm, im) in data.iter() {
+        for (i, (lm, im)) in data.iter().enumerate() {
             let mut tm = gpu::normal_mapped_mesh::Mesh::from(*im);
             // println!("NORMAL MAPPED MESH CREATED: {:?}", tm);
             tm.textures.upload_all_textures(&lm);
 
-            ids.push(ResourceID::new (
+            println!("I: {}", i);
+
+            let new_id = ResourceID::new (
                 resource::NORMAL_MAPPED_MESH,
-                self.basic_tex_meshes.len() as u32)
+                i as u32
             );
 
+            ids.push(new_id);
             self.normal_mapped_tex_meshes.push( mesh_data::NormalMapped {
                 resource: tm,
                 model_matrix: Mat4::identity(),

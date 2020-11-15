@@ -35,12 +35,40 @@ extern "system" fn gl_error_cb (
 )
 {
     use std::ffi::CStr;
-    println!("GL CALLBACK: {}, type: 0x{}, severity = 0x{}, message = {}",
+    println!("GL ERROR CALLBACK: {}, type: 0x{}, severity = 0x{}, message = {}",
              if err_type == gl::DEBUG_TYPE_ERROR { "** GL ERROR **"  } else { "" },
              err_type, severity, unsafe {CStr::from_ptr(message).to_str().unwrap()}
     );
 
 }
+
+// TODO: Proposal of new system for managing objects within the scene
+// Most of the information about object could be stored in shared pool that
+// could be easily accessed by the rendering engine once per cycle.
+//
+// Additionaly another subsystem could be used to reorganise information changed since last
+// frame into groups of commonly accessed values.
+//
+// For example object visibility can be easily accessed as a boolean value in a vector of bits
+// This information could be easily send to shaders with minimal size overhead.
+//
+// The physics system will be able to organise objects into possibly interactive groups and process
+// the currently accessible objects up to date in real time, everything else could be handled in between
+// frames if no player can effectivelly be affected by any of the possible physical interactions.
+//
+//
+// TODO: Input handling system
+// Supporting independent platforms differently might be pose different problems especially
+// if the game is designed with completely different controls in mind. Rebuilding the input system
+// would slow down development in the feature and thus I think it would be good idea if flexible system
+// is designed now that could be easily manipulated into supporting different input devices.
+//
+//
+// TODO: Primitive physics system could be eather implemented or external physics library could be used.
+// Need to learn some opencl or simply use opengl compute shaders to accelerate part of the physics engine.
+//
+// * Primary target in mind: Nalgebra *
+//
 
 
 fn process_args() -> app::Arguments {
@@ -49,6 +77,7 @@ fn process_args() -> app::Arguments {
 
     let mut args = app::Arguments {
         game_dir: None,
+        print_errors: app::ErrorGroups::NOTHING,
     };
 
     while let Some(arg) = cmd_args.next() {
@@ -63,6 +92,9 @@ fn process_args() -> app::Arguments {
                 } else {
                     panic!("No path specified for game directory!");
                 }
+            }
+            "--print-gl-errors" => {
+                args.print_errors.enable(app::ErrorGroups::GL_ERRORS);
             }
             _ => {
                 println!("Unexpected command line arguments: {}", arg);
@@ -80,7 +112,7 @@ fn main () -> io::Result<()> {
     let app_args = process_args();
 
     let app_cfg = app::AppConfig {
-        args: app_args,
+        args: app_args.clone(),
         window_size: (1024, 768),
         window_title: ("darkest v0.1.0".to_owned())
     };
@@ -104,25 +136,44 @@ fn main () -> io::Result<()> {
 
     // Setup debug messaging
     unsafe {
-        gl::Enable(gl::DEBUG_OUTPUT);
-        // gl::DebugMessageCallback(gl_error_cb, std::ptr::null());
+
+        match_bitfield! {
+            match ( app_args.print_errors ) {
+                app::ErrorGroups::GL_ERRORS => {
+                    gl::Enable(gl::DEBUG_OUTPUT);
+                    gl::DebugMessageCallback(gl_error_cb, std::ptr::null());
+                }
+                app::ErrorGroups::NOTHING => {
+                    println!("Error message output is disabled by default!");
+                }
+            }
+        }
     }
 
-    let cube_id = {
+    let model_ids = {
 
         let cube = helpers::mesh3d::load_obj(&app, "./assets/cube.obj").pop().unwrap();
+        p3d.activate_shader();
+
+        let susane = helpers::mesh3d::load_obj(&app, "./assets/susane.obj").pop().unwrap();
         p3d.activate_shader();
 
         let light_maps = helpers::mesh3d::load_dds_normal_mapped_lightmaps (
             &app, "assets/diff.dds", "assets/spec.dds", "assets/norm.dds"
         );
 
-        let ids = p3d.prepare_normal_mapped_textured_meshes(&[
-            ( &light_maps, &cube )
-        ]);
-
-        ids[0].clone()
+         p3d.prepare_normal_mapped_textured_meshes(&[
+            ( &light_maps, &cube ),
+            ( &light_maps, &susane )
+        ])
     };
+
+    let cube_id = model_ids[0].clone();
+    let cube2_id = model_ids[1].clone();
+
+    println!("CUBE_ID.get_type() = {}", cube_id.get_type());
+
+    println!("MODEL_IDS = {:?}", model_ids);
 
     unsafe {
         gl::ClearColor(0.12, 0.0, 0.20, 1.0);
@@ -186,10 +237,17 @@ fn main () -> io::Result<()> {
             }
         }
 
-        let model_mat  = cgmath::Matrix4::<f32>::from_translation(
-            cgmath::Vector3::new( 0.0, 0.0, 0.0 ),
+        let model_scale = Matrix4::from_scale(
+            0.5f32
         );
 
+        let model_mat  = model_scale * cgmath::Matrix4::<f32>::from_translation(
+            cgmath::Vector3::new( 1.1, 0.0, 0.0 ),
+        );
+
+        let model2_mat  = model_scale * cgmath::Matrix4::<f32>::from_translation(
+            cgmath::Vector3::new( -1.1, 0.0, 0.0 ),
+        );
 
         let t = time.as_millis() as f32 / 1000.0;
         let camera_dist = 3.0;
@@ -210,8 +268,11 @@ fn main () -> io::Result<()> {
             cgmath::Vector3::new( 0.0, 1.0, 0.0 ),
         );
 
-        let model_view_mat = view_mat * model_mat;
+        // let model_view_mat = view_mat * model_mat;
+        // let model_view2_mat = view_mat * model_mat;
+
         let normal_mat = model_mat.invert().unwrap().transpose();
+        let normal2_mat = model2_mat.invert().unwrap().transpose();
         // let normal_mat = model_view_mat.invert().unwrap().transpose();
 
         let proj_mat  = cgmath::perspective(
@@ -228,8 +289,12 @@ fn main () -> io::Result<()> {
 
         p3d.update_projection_matrix(proj_mat);
         p3d.update_view_matrix(view_mat);
+
         p3d.update_model_matrix(cube_id, model_mat);
         p3d.update_normal_matrix(cube_id, normal_mat);
+
+        p3d.update_model_matrix(cube2_id, model2_mat);
+        p3d.update_normal_matrix(cube2_id, normal2_mat);
 
         p3d.draw_textured_meshes();
 

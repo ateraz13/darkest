@@ -23,8 +23,15 @@ pub struct AppConfig {
     pub window_title: String,
 }
 
+make_bitflags! {
+    type ErrorGroups = u32;
+    GL_ERRORS
+}
+
+#[derive(Clone)]
 pub struct Arguments {
     pub game_dir: Option<PathBuf>,
+    pub print_errors: ErrorGroups
 }
 
 impl AppCore {
