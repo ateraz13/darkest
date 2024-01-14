@@ -7,7 +7,7 @@ build = "build.rs"
 
 [dependencies]
 gl = { path = "lib/gl" }
-cenum = { path =  "lib/cenum" }
+cenum = { git =  "https://polymer13@bitbucket.org/polymer13/cenum.git" }
 sdl2 = "0.31.0"
 cgmath = "*"
 tobj = "*"
