@@ -1,14 +1,14 @@
-pub mod mgl;
 pub mod gpu;
+pub mod mgl;
 
-use crate::resource::BufferLoaderError;
 use crate::core::app;
 use crate::core::pipeline::mgl::shader::ShaderProgram;
+use crate::resource::BufferLoaderError;
 // use crate::core::macros;
-use std::path::Path;
-use std::convert::From;
+use cgmath::prelude::{Matrix, SquareMatrix};
 use gl::types::*;
-use cgmath::prelude::{ Matrix, SquareMatrix };
+use std::convert::From;
+use std::path::Path;
 
 // TODO: To optimise the pipeline we should catergorise
 // resources into specific groups based on their quality and type.
@@ -24,32 +24,30 @@ pub mod resource {
 
     // Upper bits 8-bits are resource type identifier
     #[derive(Debug, Clone, Copy)]
-    pub struct ResourceID (u32);
+    pub struct ResourceID(u32);
 
     impl ResourceID {
-        const U32_MAX : u32 =  u32::MAX;
-        const U8_MAX : u8 = u8::MAX;
+        const U32_MAX: u32 = u32::MAX;
+        const U8_MAX: u8 = u8::MAX;
         const TYPE_PART_MASK: u32 = (u8::MAX as u32) << 24;
         const ID_PART_MASK: u32 = ResourceID::TYPE_PART_MASK ^ ResourceID::U32_MAX;
 
         pub fn new(rc_type: ResourceType, uid: u32) -> Self {
-
-            if ( uid & Self::TYPE_PART_MASK ) != 0 {
+            if (uid & Self::TYPE_PART_MASK) != 0 {
                 panic!("Invalid ResourceID created! (ID exceeds 24-bit bounds)");
             }
 
             // Uppper 8 bits identify resource type the rest is a unique identifier
-            Self( ( (rc_type.0 as u32) << 24) | (uid ) )
+            Self(((rc_type.0 as u32) << 24) | (uid))
         }
 
         pub fn get_type(&self) -> ResourceType {
-            ResourceType(( self.0 >> 24 ) as u8)
+            ResourceType((self.0 >> 24) as u8)
         }
 
         pub fn as_index(&self) -> usize {
-            ( Self::ID_PART_MASK & self.0) as usize
+            (Self::ID_PART_MASK & self.0) as usize
         }
-
     }
 }
 
@@ -92,34 +90,45 @@ pub struct Pipeline3D {
 #[derive(Debug)]
 pub enum InitError {
     FailedLoadingResource(BufferLoaderError),
-    ShaderIssue(mgl::shader::ShaderIssue)
+    ShaderIssue(mgl::shader::ShaderIssue),
 }
 
 impl_error_conv!(BufferLoaderError, InitError, FailedLoadingResource);
 impl_error_conv!(mgl::shader::ShaderIssue, InitError, ShaderIssue);
 
-fn configure_texture_parameters () {
+fn configure_texture_parameters() {
     unsafe {
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::MIRRORED_REPEAT as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::MIRRORED_REPEAT as i32);
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_S,
+            gl::MIRRORED_REPEAT as i32,
+        );
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_WRAP_T,
+            gl::MIRRORED_REPEAT as i32,
+        );
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR_MIPMAP_LINEAR as i32);
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MIN_FILTER,
+            gl::LINEAR_MIPMAP_LINEAR as i32,
+        );
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
     }
 }
 
 impl Pipeline3D {
-
-    pub fn create_and_prepare (app: &app::AppCore) -> Result<Self, InitError> {
-        let p3d =  Self {
+    pub fn create_and_prepare(app: &app::AppCore) -> Result<Self, InitError> {
+        let p3d = Self {
             render: Render3D {
-                main_shader: Self::load_and_compile_shader(app)?
+                main_shader: Self::load_and_compile_shader(app)?,
             },
             projection_matrix: Mat4::identity(),
             view_matrix: Mat4::identity(),
             basic_tex_meshes: vec![],
-            normal_mapped_tex_meshes: vec![]
+            normal_mapped_tex_meshes: vec![],
         };
 
         p3d.configure_gl_parameters();
@@ -144,9 +153,14 @@ impl Pipeline3D {
     }
 
     //FIXME: If this is slow than try something else
-    pub fn prepare_basic_textured_meshes(&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::Basic, &mgl::attr::mesh3d::IndexedMesh)]) -> Vec<ResourceID>
-    {
-        let mut ids : Vec<ResourceID> = vec![];
+    pub fn prepare_basic_textured_meshes(
+        &mut self,
+        data: &[(
+            &mgl::attr::mesh3d::lightmaps::Basic,
+            &mgl::attr::mesh3d::IndexedMesh,
+        )],
+    ) -> Vec<ResourceID> {
+        let mut ids: Vec<ResourceID> = vec![];
         ids.reserve(data.len());
 
         self.basic_tex_meshes.clear();
@@ -156,24 +170,25 @@ impl Pipeline3D {
             // println!("TEXTURED MESH CREATED: {:?}", tm);
             tm.textures.upload_all_textures(&lm);
 
-            ids.push( ResourceID::new (
-                resource::TEXTURED_MESH,
-                i as u32
-            ));
+            ids.push(ResourceID::new(resource::TEXTURED_MESH, i as u32));
 
             self.basic_tex_meshes.push(mesh_data::Basic {
                 resource: tm,
                 model_matrix: Mat4::identity(),
-                normal_matrix: Mat4::identity()
+                normal_matrix: Mat4::identity(),
             });
-
         }
         ids
     }
 
-    pub fn prepare_normal_mapped_textured_meshes (&mut self, data: &[(&mgl::attr::mesh3d::lightmaps::NormalMapped, &mgl::attr::mesh3d::IndexedMesh)]) -> Vec<ResourceID>
-    {
-        let mut ids : Vec<ResourceID> = vec![];
+    pub fn prepare_normal_mapped_textured_meshes(
+        &mut self,
+        data: &[(
+            &mgl::attr::mesh3d::lightmaps::NormalMapped,
+            &mgl::attr::mesh3d::IndexedMesh,
+        )],
+    ) -> Vec<ResourceID> {
+        let mut ids: Vec<ResourceID> = vec![];
         ids.reserve(data.len());
 
         self.basic_tex_meshes.clear();
@@ -185,16 +200,13 @@ impl Pipeline3D {
 
             println!("I: {}", i);
 
-            let new_id = ResourceID::new (
-                resource::NORMAL_MAPPED_MESH,
-                i as u32
-            );
+            let new_id = ResourceID::new(resource::NORMAL_MAPPED_MESH, i as u32);
 
             ids.push(new_id);
-            self.normal_mapped_tex_meshes.push( mesh_data::NormalMapped {
+            self.normal_mapped_tex_meshes.push(mesh_data::NormalMapped {
                 resource: tm,
                 model_matrix: Mat4::identity(),
-                normal_matrix: Mat4::identity()
+                normal_matrix: Mat4::identity(),
             });
         }
 
@@ -202,40 +214,40 @@ impl Pipeline3D {
     }
 
     fn load_and_compile_shader(app: &app::AppCore) -> Result<ShaderProgram, InitError> {
-
-        let vert_shader = mgl::shader::Shader::from_source (
-            &app.buffer_loader.load_cstring(Path::new("shaders/basic_vert.glsl"))?,
-            gl::VERTEX_SHADER
+        let vert_shader = mgl::shader::Shader::from_source(
+            &app.buffer_loader
+                .load_cstring(Path::new("shaders/basic_vert.glsl"))?,
+            gl::VERTEX_SHADER,
         )?;
 
-        let frag_shader = mgl::shader::Shader::from_source (
-            &app.buffer_loader.load_cstring(Path::new("shaders/basic_frag.glsl"))?,
-            gl::FRAGMENT_SHADER
+        let frag_shader = mgl::shader::Shader::from_source(
+            &app.buffer_loader
+                .load_cstring(Path::new("shaders/basic_frag.glsl"))?,
+            gl::FRAGMENT_SHADER,
         )?;
 
-        Ok(mgl::shader::ShaderProgram::from_shaders(&[vert_shader, frag_shader])?)
+        Ok(mgl::shader::ShaderProgram::from_shaders(&[
+            vert_shader,
+            frag_shader,
+        ])?)
     }
 
     pub fn update_model_matrix(&mut self, id: ResourceID, mat: Mat4) {
         match id.get_type() {
-            resource::TEXTURED_MESH => {
-                self.basic_tex_meshes[id.as_index()].model_matrix = mat
-            },
+            resource::TEXTURED_MESH => self.basic_tex_meshes[id.as_index()].model_matrix = mat,
             resource::NORMAL_MAPPED_MESH => {
                 self.normal_mapped_tex_meshes[id.as_index()].model_matrix = mat
-            },
+            }
             _ => {}
         }
     }
 
     pub fn update_normal_matrix(&mut self, id: ResourceID, mat: Mat4) {
         match id.get_type() {
-            resource::TEXTURED_MESH => {
-                self.basic_tex_meshes[id.as_index()].normal_matrix = mat
-            },
+            resource::TEXTURED_MESH => self.basic_tex_meshes[id.as_index()].normal_matrix = mat,
             resource::NORMAL_MAPPED_MESH => {
                 self.normal_mapped_tex_meshes[id.as_index()].normal_matrix = mat
-            },
+            }
             _ => {}
         }
     }
@@ -249,19 +261,27 @@ impl Pipeline3D {
     }
 
     pub fn draw_textured_meshes(&self) {
-
         // disable normal maps
         unsafe {
             gl::Uniform1ui(gpu::attrs::USE_NORMALMAP_FLAG, 0);
             self.render.main_shader.set_active();
-            gl::Uniform1i(gpu::attrs::DIFFUSE_SAMPLER_LOCATION,  gpu::attrs::DIFFUSE_TEXTURE_UNIT as i32); // Texture Unit 0 : DIFFUSE
-            gl::Uniform1i(gpu::attrs::SPECULAR_SAMPLER_LOCATION, gpu::attrs::SPECULAR_TEXTURE_UNIT as i32); // Texture Unit 1 : SPECULAR
-            gl::Uniform1i(gpu::attrs::NORMAL_SAMPLER_LOCATION,   gpu::attrs::NORMAL_TEXTURE_UNIT as i32); // Texture Unit 2 : NORMAL
+            gl::Uniform1i(
+                gpu::attrs::DIFFUSE_SAMPLER_LOCATION,
+                gpu::attrs::DIFFUSE_TEXTURE_UNIT as i32,
+            ); // Texture Unit 0 : DIFFUSE
+            gl::Uniform1i(
+                gpu::attrs::SPECULAR_SAMPLER_LOCATION,
+                gpu::attrs::SPECULAR_TEXTURE_UNIT as i32,
+            ); // Texture Unit 1 : SPECULAR
+            gl::Uniform1i(
+                gpu::attrs::NORMAL_SAMPLER_LOCATION,
+                gpu::attrs::NORMAL_TEXTURE_UNIT as i32,
+            ); // Texture Unit 2 : NORMAL
         }
 
         for m in self.basic_tex_meshes.iter() {
             unsafe {
-                let mv = self.view_matrix*m.model_matrix;
+                let mv = self.view_matrix * m.model_matrix;
                 let mvp = self.projection_matrix * mv;
 
                 gl::UniformMatrix4fv(1, 1, gl::FALSE, m.model_matrix.as_ptr());
@@ -269,7 +289,6 @@ impl Pipeline3D {
                 gl::UniformMatrix4fv(3, 1, gl::FALSE, self.projection_matrix.as_ptr());
                 gl::UniformMatrix4fv(4, 1, gl::FALSE, mvp.as_ptr());
                 gl::UniformMatrix4fv(5, 1, gl::FALSE, m.normal_matrix.as_ptr());
-
             }
 
             self.render.draw(&m.resource);
@@ -284,15 +303,35 @@ impl Pipeline3D {
 
         for m in self.normal_mapped_tex_meshes.iter() {
             unsafe {
-                let mv = self.view_matrix*m.model_matrix;
+                let mv = self.view_matrix * m.model_matrix;
                 let mvp = self.projection_matrix * mv;
 
-                gl::UniformMatrix4fv(uniforms::MODEL_MAT_LOCATION, 1, gl::FALSE, m.model_matrix.as_ptr());
-                gl::UniformMatrix4fv(uniforms::VIEW_MAT_LOCATION, 1, gl::FALSE, self.view_matrix.as_ptr());
+                gl::UniformMatrix4fv(
+                    uniforms::MODEL_MAT_LOCATION,
+                    1,
+                    gl::FALSE,
+                    m.model_matrix.as_ptr(),
+                );
+                gl::UniformMatrix4fv(
+                    uniforms::VIEW_MAT_LOCATION,
+                    1,
+                    gl::FALSE,
+                    self.view_matrix.as_ptr(),
+                );
                 gl::UniformMatrix4fv(uniforms::MODELVIEW_MAT_LOCATION, 1, gl::FALSE, mv.as_ptr());
-                gl::UniformMatrix4fv(uniforms::PROJECTION_MAT_LOCATION, 1, gl::FALSE, self.projection_matrix.as_ptr());
+                gl::UniformMatrix4fv(
+                    uniforms::PROJECTION_MAT_LOCATION,
+                    1,
+                    gl::FALSE,
+                    self.projection_matrix.as_ptr(),
+                );
                 gl::UniformMatrix4fv(uniforms::MVP_MAT_LOCATION, 1, gl::FALSE, mvp.as_ptr());
-                gl::UniformMatrix4fv(uniforms::NORMAL_MAT_LOCATION, 1, gl::FALSE, m.normal_matrix.as_ptr());
+                gl::UniformMatrix4fv(
+                    uniforms::NORMAL_MAT_LOCATION,
+                    1,
+                    gl::FALSE,
+                    m.normal_matrix.as_ptr(),
+                );
 
                 self.render.main_shader.set_active();
             }
@@ -307,11 +346,8 @@ trait Draw<T> {
 }
 
 impl Draw<gpu::basic_mesh::Mesh> for Render3D {
-
     fn draw(&self, e: &gpu::basic_mesh::Mesh) {
-
         unsafe {
-
             gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::DIFFUSE_TEXTURE_UNIT);
             gl::BindTexture(gl::TEXTURE_2D, e.textures.diffuse);
             gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::SPECULAR_TEXTURE_UNIT);
@@ -323,20 +359,15 @@ impl Draw<gpu::basic_mesh::Mesh> for Render3D {
                 gl::TRIANGLES,
                 e.element_count,
                 gl::UNSIGNED_INT,
-                0 as *const GLvoid
+                0 as *const GLvoid,
             );
-
         }
     }
-
 }
 
 impl Draw<gpu::normal_mapped_mesh::Mesh> for Render3D {
-
     fn draw(&self, e: &gpu::normal_mapped_mesh::Mesh) {
-
         unsafe {
-
             gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::DIFFUSE_TEXTURE_UNIT);
             gl::BindTexture(gl::TEXTURE_2D, e.textures.diffuse);
             gl::ActiveTexture(gl::TEXTURE0 + gpu::attrs::SPECULAR_TEXTURE_UNIT);
@@ -350,10 +381,8 @@ impl Draw<gpu::normal_mapped_mesh::Mesh> for Render3D {
                 gl::TRIANGLES,
                 e.element_count,
                 gl::UNSIGNED_INT,
-                0 as *const GLvoid
+                0 as *const GLvoid,
             );
-
         }
     }
-
 }
