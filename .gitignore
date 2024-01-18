@@ -4,3 +4,5 @@
 tmp/
 **/Cargo.lock
 /target
+/lib/gl/target
+/lib/*/target
