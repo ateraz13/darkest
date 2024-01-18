@@ -4,6 +4,7 @@ use std::ffi::{CStr, CString};
 pub enum ShaderIssue {
     CompileError(String),
     LinkError(String),
+    StringConversionError(String),
 }
 
 impl std::fmt::Display for ShaderIssue {
@@ -11,6 +12,9 @@ impl std::fmt::Display for ShaderIssue {
         match self {
             Self::CompileError(msg) => write!(f, "Shader compile error: {}", msg),
             Self::LinkError(msg) => write!(f, "Shader link issue: {}", msg),
+            Self::StringConversionError(msg) => {
+                write!(f, "Failed to convert between string represations: {}", msg)
+            }
         }
     }
 }
@@ -81,6 +85,52 @@ impl ShaderProgram {
         }
 
         // FIXME: Retreve all the defined uniforms in the shader program.
+
+        const MAX_UNIFORM_NAME_LEN: usize = 256;
+        let mut uniform_count: GLint = 0;
+        let mut name_buf = [0i8; MAX_UNIFORM_NAME_LEN + 1];
+        let mut name_len = 0;
+        let mut unif_size = 0;
+        let mut unif_type = 0;
+
+        let mut unifs = Vec::<(String, u32, i32, u32)>::new();
+        unifs.reserve(uniform_count as usize);
+
+        unsafe {
+            gl::GetProgramiv(program_id, gl::ACTIVE_UNIFORMS, &mut uniform_count);
+            for uid in 0u32..(uniform_count as u32) {
+                gl::GetActiveUniform(
+                    program_id,
+                    uid,
+                    MAX_UNIFORM_NAME_LEN as i32,
+                    &mut name_len,
+                    &mut unif_size,
+                    &mut unif_type,
+                    name_buf.as_mut_ptr(),
+                );
+
+                let unif_name = unsafe {
+                    match CString::from(CStr::from_ptr(name_buf.as_ptr())).into_string() {
+                        Ok(s) => s,
+                        Err(err) => {
+                            return Err(ShaderIssue::StringConversionError(format!(
+                                "Uniform name: {}",
+                                err.to_string()
+                            )))
+                        }
+                    }
+                };
+
+                unifs.push((unif_name, uid, unif_size, unif_type));
+            }
+
+            for (unif_name, unif_id, unif_size, unif_type) in unifs {
+                println!(
+                    "Uniform:\n\tName: {}\n\tID: {}\n\tSize: {}\n\tType: {}",
+                    unif_name, unif_id, unif_size, unif_type
+                );
+            }
+        }
 
         return Ok(Self { id: program_id });
     }
