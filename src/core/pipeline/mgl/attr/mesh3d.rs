@@ -1,6 +1,6 @@
 use gl::types::*;
 use std::convert::TryInto;
-use super::AttributeType;
+// use super::AttributeType;
 
 type MeshIndex = GLuint;
 
@@ -39,7 +39,6 @@ pub mod lightmaps {
         pub specular: Image,
         pub normal: Image,
     }
-
 }
 
 #[derive(Debug)]
@@ -48,24 +47,23 @@ pub struct IndexedMesh {
 }
 
 impl IndexedMesh {
-
     // What if indices exeed the number of positions ?
     // Probably don't need to worry but also be careful !
     #[allow(dead_code)]
     pub fn new(attrs: VertexAttributes) -> Self {
-        Self {
-            attributes: attrs,
-        }
+        Self { attributes: attrs }
     }
 
     #[allow(dead_code)]
-    pub fn vertex_count (&self) -> GLuint {
+    pub fn vertex_count(&self) -> GLuint {
         self.attributes.indices.len() as GLuint
     }
 
     #[allow(dead_code)]
     pub fn index_buffer_size(&self) -> GLsizeiptr {
-        (self.attributes.indices.len() * std::mem::size_of::<MeshIndex>()).try_into().unwrap()
+        (self.attributes.indices.len() * std::mem::size_of::<MeshIndex>())
+            .try_into()
+            .unwrap()
     }
 
     #[allow(dead_code)]
@@ -74,7 +72,6 @@ impl IndexedMesh {
     }
 
     pub fn generate_tangents(&mut self) {
-
         let indices = &self.attributes.indices;
         let pos = &self.attributes.positions;
         let uvs = &self.attributes.uvs;
@@ -89,20 +86,17 @@ impl IndexedMesh {
 
         println!("NUM OF INDICES: {}", indices.len());
 
-        for i in (0 .. indices.len()).step_by(3) {
-
+        for i in (0..indices.len()).step_by(3) {
             let (v1, v2, v3) = (
                 &pos[indices[i] as usize],
-                &pos[indices[ i+1 ] as usize],
-                &pos[indices[ i+2 ] as usize]
-                // &pos[i], &pos[i+1], &pos[i+2]
+                &pos[indices[i + 1] as usize],
+                &pos[indices[i + 2] as usize], // &pos[i], &pos[i+1], &pos[i+2]
             );
 
             let (uv1, uv2, uv3) = (
                 &uvs[indices[i] as usize],
-                &uvs[indices[i+1] as usize],
-                &uvs[indices[i+2] as usize]
-                // &uvs[i], &uvs[i+1], &uvs[i+2]
+                &uvs[indices[i + 1] as usize],
+                &uvs[indices[i + 2] as usize], // &uvs[i], &uvs[i+1], &uvs[i+2]
             );
 
             let edge1 = v2 - v1;
@@ -126,13 +120,10 @@ impl IndexedMesh {
                 f * (-delta_uv2.x * edge1.z - delta_uv1.x * edge2.z),
             );
 
-            for _ in 0 .. 3 {
+            for _ in 0..3 {
                 tans.push(tan);
                 bitans.push(bitan);
             }
-
         }
-
     }
-
 }

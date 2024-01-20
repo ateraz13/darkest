@@ -13,36 +13,36 @@ pub mod attrs {
     pub type IdVal = gl::types::GLuint;
     pub type UniformId = gl::types::GLint;
 
-    pub const POSITION_LOCATION : IdVal = 0;
-    pub const NORMAL_LOCATION : IdVal = 1;
-    pub const UV_LOCATION : IdVal = 2;
-    pub const TANGENT_LOCATION : IdVal = 3;
-    pub const BITANGENT_LOCATION : IdVal = 4;
+    pub const POSITION_LOCATION: IdVal = 0;
+    pub const NORMAL_LOCATION: IdVal = 1;
+    pub const UV_LOCATION: IdVal = 2;
+    pub const TANGENT_LOCATION: IdVal = 3;
+    pub const BITANGENT_LOCATION: IdVal = 4;
 
-    pub const DIFFUSE_TEXTURE_UNIT : IdVal = 0;
-    pub const DIFFUSE_SAMPLER_LOCATION : UniformId = 20;
+    pub const DIFFUSE_TEXTURE_UNIT: IdVal = 0;
+    pub const DIFFUSE_SAMPLER_LOCATION: UniformId = 20;
 
-    pub const SPECULAR_TEXTURE_UNIT : IdVal = 1;
-    pub const SPECULAR_SAMPLER_LOCATION : UniformId = 21;
+    pub const SPECULAR_TEXTURE_UNIT: IdVal = 1;
+    pub const SPECULAR_SAMPLER_LOCATION: UniformId = 21;
 
-    pub const NORMAL_TEXTURE_UNIT : IdVal = 2;
-    pub const NORMAL_SAMPLER_LOCATION : UniformId = 22;
+    pub const NORMAL_TEXTURE_UNIT: IdVal = 2;
+    pub const NORMAL_SAMPLER_LOCATION: UniformId = 22;
 
-    pub const USE_NORMALMAP_FLAG : UniformId = 30;
-    pub const USE_BLINN_FLAG : UniformId = 31;
+    pub const USE_NORMALMAP_FLAG: UniformId = 30;
+    pub const USE_BLINN_FLAG: UniformId = 31;
 
     pub mod uniforms {
 
         pub type UniformId = gl::types::GLint;
 
-        pub const MODEL_MAT_LOCATION : UniformId = 1;
-        pub const VIEW_MAT_LOCATION : UniformId = 2;
-        pub const MODELVIEW_MAT_LOCATION : UniformId = 3;
-        pub const PROJECTION_MAT_LOCATION : UniformId = 4;
-        pub const MVP_MAT_LOCATION : UniformId = 5;
-        pub const NORMAL_MAT_LOCATION : UniformId = 6;
+        pub const MODEL_MAT_LOCATION: UniformId = 1;
+        pub const VIEW_MAT_LOCATION: UniformId = 2;
+        pub const MODELVIEW_MAT_LOCATION: UniformId = 3;
+        pub const PROJECTION_MAT_LOCATION: UniformId = 4;
+        pub const MVP_MAT_LOCATION: UniformId = 5;
+        pub const NORMAL_MAT_LOCATION: UniformId = 6;
+        pub const VIEW_POS_LOCATION: UniformId = 10;
     }
-
 }
 
 macro_rules! define_buffers {
@@ -101,41 +101,67 @@ macro_rules! define_buffers {
     }
 }
 
-
-
-
-
 #[allow(unused_macros)]
 macro_rules! buffer_bind_target {
-    (element_array) => {gl::ELEMENT_ARRAY_BUFFER};
-    (array) => {gl::ARRAY_BUFFER};
+    (element_array) => {
+        gl::ELEMENT_ARRAY_BUFFER
+    };
+    (array) => {
+        gl::ARRAY_BUFFER
+    };
 }
 
 macro_rules! vertex_attrib_type {
-    (float) => {gl::FLOAT};
-    (vec2) => {gl::FLOAT};
-    (vec3) => {gl::FLOAT};
-    (vec4) => {gl::FLOAT};
-    (mat2) => {gl::FLOAT};
-    (mat3) => {gl::FLOAT};
-    (mat4) => {gl::FLOAT};
+    (float) => {
+        gl::FLOAT
+    };
+    (vec2) => {
+        gl::FLOAT
+    };
+    (vec3) => {
+        gl::FLOAT
+    };
+    (vec4) => {
+        gl::FLOAT
+    };
+    (mat2) => {
+        gl::FLOAT
+    };
+    (mat3) => {
+        gl::FLOAT
+    };
+    (mat4) => {
+        gl::FLOAT
+    };
 }
 
-
 macro_rules! vertex_attrib_component_count {
-    (float) => {1};
-    (vec2) => {2};
-    (vec3) => {3};
-    (vec4) => {4};
-    (mat2) => {4};
-    (mat3) => {9};
-    (mat4) => {16};
+    (float) => {
+        1
+    };
+    (vec2) => {
+        2
+    };
+    (vec3) => {
+        3
+    };
+    (vec4) => {
+        4
+    };
+    (mat2) => {
+        4
+    };
+    (mat3) => {
+        9
+    };
+    (mat4) => {
+        16
+    };
 }
 
 macro_rules! vertex_attrib_ptr {
     (target: element_array $($rest:tt)*) => {};
     (target: $target:tt, id: $id:expr, location: $loc:expr, config: packed $type:tt array) => {
-
         gl::EnableVertexAttribArray($loc);
         gl::BindBuffer(buffer_bind_target!($target), $id);
 
@@ -146,14 +172,16 @@ macro_rules! vertex_attrib_ptr {
             vertex_attrib_type!($type),
             gl::FALSE,
             0,
-            std::ptr::null()
+            std::ptr::null(),
         );
-    }
+    };
 }
 
 #[allow(unused_macros)]
 macro_rules! buffer_access_method {
-    (static_draw) => {gl::STATIC_DRAW};
+    (static_draw) => {
+        gl::STATIC_DRAW
+    };
 }
 
 macro_rules! buffer_data  {
@@ -188,17 +216,20 @@ macro_rules! buffer_data  {
 }
 
 fn size_of_vec<T>(v: &Vec<T>) -> GLsizeiptr {
-    ( std::mem::size_of::<T>() * v.len() ) as GLsizeiptr
+    (std::mem::size_of::<T>() * v.len()) as GLsizeiptr
 }
 
 pub mod basic_mesh {
 
-    use super::{ textures, IdVal, attrs, size_of_vec };
-    use gl::types::*;
+    use super::{attrs, size_of_vec, textures, IdVal};
     use crate::core::pipeline::mgl::attr::mesh3d;
+    use gl::types::*;
 
-    define_buffers!( Buffers {
-        index, position, normal, uv
+    define_buffers!(Buffers {
+        index,
+        position,
+        normal,
+        uv
     });
 
     #[derive(Debug)]
@@ -223,9 +254,7 @@ pub mod basic_mesh {
     use std::convert::TryInto;
 
     impl From<&mesh3d::IndexedMesh> for Mesh {
-
         fn from(data: &mesh3d::IndexedMesh) -> Self {
-
             let mut mesh: Mesh = Mesh::new();
 
             mesh.element_count = data.attributes.indices.len().try_into().unwrap();
@@ -270,11 +299,16 @@ pub mod basic_mesh {
 
 pub mod normal_mapped_mesh {
 
-    use super::{ textures, attrs, IdVal, size_of_vec };
+    use super::{attrs, size_of_vec, textures, IdVal};
     use gl::types::*;
 
-    define_buffers!( Buffers {
-        index, position, normal, uv, tangent, bitangent
+    define_buffers!(Buffers {
+        index,
+        position,
+        normal,
+        uv,
+        tangent,
+        bitangent
     });
 
     #[derive(Debug)]
@@ -300,9 +334,7 @@ pub mod normal_mapped_mesh {
     use std::convert::TryInto;
 
     impl From<&mesh3d::IndexedMesh> for Mesh {
-
         fn from(data: &mesh3d::IndexedMesh) -> Self {
-
             let mut mesh: Mesh = Mesh::new();
 
             mesh.element_count = data.attributes.indices.len().try_into().unwrap();
@@ -357,6 +389,4 @@ pub mod normal_mapped_mesh {
             mesh
         }
     }
-
 }
-
