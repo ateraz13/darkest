@@ -82,7 +82,7 @@ trait UniformUpload {
 }
 
 macro_rules! impl_from_uniform_def {
-    (($struct:ident => $enum:ident) => |$var:ident:$var_type:ty| $upload_block:block) => {
+    (($struct:ident => $enum:ident)) => {
         impl From<$struct> for Uniform {
             fn from(other: $struct) -> Uniform {
                 Uniform::$enum(other)
@@ -94,80 +94,31 @@ macro_rules! impl_from_uniform_def {
                 $struct { def: def }
             }
         }
-
-        impl UniformUpload<Item = $var_type> for $struct {
-           fn upload(&self, $var:$var_type) $upload_block
-        }
     };
 }
 
 macro_rules! impl_from_uniform_defs {
-    (($struct:ident => $enum:ident) => |$var:ident : $var_type:ty|  $upload_block:block $(,($struct_rest:ident => $enum_rest:ident) => |$var_rest:ident : $var_type_rest:ty| $upload_block_rest:block)*) => {
-        impl_from_uniform_def!{($struct => $enum) => |$var:$var_type|  $upload_block}
-        $(impl_from_uniform_def!{($struct_rest => $enum_rest) => |$var_rest:$var_type_rest| $upload_block_rest})*
+    (($struct:ident => $enum:ident)$(,($struct_rest:ident => $enum_rest:ident))*) => {
+        impl_from_uniform_def!{($struct => $enum)}
+        $(impl_from_uniform_def!{($struct_rest => $enum_rest)})*
     }
 }
 
 impl_from_uniform_defs! {
-    (IntUniform => Int) => |val:i32| {
-        glUniformi(self.id, val);
-    },
-    (ShortUniform => Short) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (LongUniform => Long) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (UIntUniform => UInt) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (UShortUniform => UShort) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (ULongUniform => ULong) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (FloatUniform => Float) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (HalfUniform => Half) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (DoubleUniform => Double) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (Vec2Uniform => Vec2) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (Vec3Uniform => Vec3) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (Vec4Uniform => Vec4) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (Mat2Uniform => Mat2) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-    (Mat3Uniform => Mat3) => |val:i32| {
-        //pointer_here;
-        glUniform1i(self.id, val);
-    },
-   (Mat4Uniform => Mat4) => |val:i32| {
-       //pointer_here;
-       glUniform1i(self.id, val);
-   }
+    (IntUniform => Int),
+    (LongUniform => Long),
+    (UIntUniform => UInt),
+    (UShortUniform => UShort),
+    (ULongUniform => ULong),
+    (FloatUniform => Float),
+    (HalfUniform => Half),
+    (DoubleUniform => Double),
+    (Vec2Uniform => Vec2),
+    (Vec3Uniform => Vec3),
+    (Vec4Uniform => Vec4),
+    (Mat2Uniform => Mat2),
+    (Mat3Uniform => Mat3),
+    (Mat4Uniform => Mat4)
 }
 
 #[derive(Debug)]
