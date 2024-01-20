@@ -15,67 +15,6 @@ impl UniformDefinition {
     }
 }
 
-#[derive(Debug)]
-pub struct IntUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct ShortUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct LongUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct UIntUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct UShortUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct ULongUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct FloatUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct HalfUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct DoubleUniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct Vec2Uniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct Vec3Uniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct Vec4Uniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct Mat2Uniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct Mat3Uniform {
-    def: UniformDefinition,
-}
-#[derive(Debug)]
-pub struct Mat4Uniform {
-    def: UniformDefinition,
-}
-
 trait UniformUpload {
     type Item;
     fn upload(&self, item: Self::Item);
@@ -83,6 +22,11 @@ trait UniformUpload {
 
 macro_rules! impl_from_uniform_def {
     (($struct:ident => $enum:ident)) => {
+        #[derive(Debug)]
+        pub struct $struct {
+            def: UniformDefinition,
+        }
+
         impl From<$struct> for Uniform {
             fn from(other: $struct) -> Uniform {
                 Uniform::$enum(other)
@@ -108,7 +52,6 @@ impl_from_uniform_defs! {
     (IntUniform => Int),
     (LongUniform => Long),
     (UIntUniform => UInt),
-    (UShortUniform => UShort),
     (ULongUniform => ULong),
     (FloatUniform => Float),
     (HalfUniform => Half),
@@ -124,10 +67,8 @@ impl_from_uniform_defs! {
 #[derive(Debug)]
 pub enum Uniform {
     Int(IntUniform),
-    Short(ShortUniform),
     Long(LongUniform),
     UInt(UIntUniform),
-    UShort(UShortUniform),
     ULong(ULongUniform),
     Float(FloatUniform),
     Half(HalfUniform),
