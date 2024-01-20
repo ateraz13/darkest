@@ -111,7 +111,7 @@ impl ShaderProgram {
                     name_buf.as_mut_ptr(),
                 );
 
-                let unif_name = unsafe {
+                let unif_name = {
                     match CString::from(CStr::from_ptr(name_buf.as_ptr())).into_string() {
                         Ok(s) => s,
                         Err(err) => {
