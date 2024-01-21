@@ -6,6 +6,7 @@ pub enum ShaderIssue {
     CompileError(String),
     LinkError(String),
     StringConversionError(String),
+    UnsupportedUniformOperation(String),
 }
 
 impl std::fmt::Display for ShaderIssue {
@@ -15,6 +16,9 @@ impl std::fmt::Display for ShaderIssue {
             Self::LinkError(msg) => write!(f, "Shader link issue: {}", msg),
             Self::StringConversionError(msg) => {
                 write!(f, "Failed to convert between string represations: {}", msg)
+            }
+            Self::UnsupportedUniformOperation(msg) => {
+                write!(f, "Invalid Uniform operation: {}", msg)
             }
         }
     }
@@ -139,6 +143,16 @@ impl ShaderProgram {
             id: program_id,
             uniform_defs: unifs,
         });
+    }
+
+    pub fn uniform_by_name(&self, name: &String) -> Option<Uniform> {
+        for unif in &self.uniform_defs {
+            let def = unif.get_def();
+            if def.name == *name {
+                return Some(unif.clone());
+            }
+        }
+        return None;
     }
 }
 

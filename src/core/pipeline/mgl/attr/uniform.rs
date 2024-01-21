@@ -1,8 +1,11 @@
-#[derive(Debug)]
+use crate::core::pipeline::mgl::shader::ShaderIssue;
+use std::convert::TryFrom;
+
+#[derive(Debug, Clone)]
 pub struct UniformDefinition {
-    id: gl::types::GLuint,
-    name: String,
-    data_size: gl::types::GLint,
+    pub id: gl::types::GLuint,
+    pub name: String,
+    pub data_size: gl::types::GLint,
 }
 
 impl UniformDefinition {
@@ -22,7 +25,7 @@ trait UniformUpload {
 
 macro_rules! impl_from_uniform_def {
     (($struct:ident, $enum:ident)) => {
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub struct $struct {
             def: UniformDefinition,
         }
@@ -43,7 +46,7 @@ macro_rules! impl_from_uniform_def {
 
 macro_rules! impl_from_uniform_defs {
     ($(($gl_type_rest:ident, $struct_rest:ident, $enum_rest:ident),)*) => {
-        #[derive(Debug)]
+        #[derive(Debug, Clone)]
         pub enum Uniform {
             $($enum_rest($struct_rest),)*
         }
@@ -53,6 +56,27 @@ macro_rules! impl_from_uniform_defs {
                 match gl_type {
                     $(gl::$gl_type_rest => Uniform::$enum_rest(def.into()),)*
                         _ => {panic!("Unimplemented uniform type!");}
+                }
+            }
+        }
+
+        $(
+            impl TryFrom<Uniform>  for $struct_rest {
+                type Error = ShaderIssue;
+                fn try_from(other: Uniform) -> Result<$struct_rest, Self::Error> {
+                    match other {
+                        Uniform::$enum_rest(unif) => Ok(unif),
+                        _ => Err(ShaderIssue::UnsupportedUniformOperation(format!("Incorrect uniform type it cannot be converted to {}: {:?} ", stringify!($enum), other)))
+                    }
+                }
+            }
+        )*
+
+        impl Uniform {
+            pub fn get_def(&self) -> UniformDefinition {
+                match self {
+                    $(Uniform::$enum_rest(concrete) => concrete.def.clone(),)*
+                    _ => { panic!("This is a extremelly weird bug, this should happend!"); }
                 }
             }
         }
