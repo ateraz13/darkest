@@ -159,7 +159,7 @@ fn main() -> io::Result<()> {
         let cube = helpers::mesh3d::load_obj(&app, "./assets/cube.obj")
             .pop()
             .unwrap();
-        p3d.activate_shader();
+        // p3d.activate_shader();
 
         let susane = helpers::mesh3d::load_obj(&app, "./assets/susane.obj")
             .pop()
@@ -177,7 +177,7 @@ fn main() -> io::Result<()> {
     };
 
     let cube_id = model_ids[0].clone();
-    let cube2_id = model_ids[1].clone();
+    let susane_id = model_ids[1].clone();
 
     println!("CUBE_ID.get_type() = {}", cube_id.get_type());
 
@@ -267,16 +267,16 @@ fn main() -> io::Result<()> {
 
         let model_scale = Mat4::from_scale(0.5f32);
 
-        let model_mat = model_scale * Mat4::from_translation(Vec3::new(1.1, 0.0, 0.0));
+        let cube_model_mat = model_scale * Mat4::from_translation(Vec3::new(1.1, 0.0, 0.0));
 
-        let model2_mat = model_scale * Mat4::from_translation(Vec3::new(-1.1, 0.0, 0.0));
+        let susane_model_mat = model_scale * Mat4::from_translation(Vec3::new(-1.1, 0.0, 0.0));
 
         view_rotation += Vec3::new(0.0, view_drag_amount.x, view_drag_amount.y);
 
         let _t = time.as_millis() as f32 / 1000.0;
         let _camera_dist = 3.0;
 
-        let camera_pos = Point3::new(0.0, 0.0, 2.0);
+        let camera_pos = Point3::new(0.0, 0.0, 1.0);
         let camera_pos = cgmath::Quaternion::from_sv(1.0, view_rotation).rotate_point(camera_pos);
 
         let view_center = Point3::new(0.0, 0.0, 0.0);
@@ -290,13 +290,13 @@ fn main() -> io::Result<()> {
         // let model_view_mat = view_mat * model_mat;
         // let model_view2_mat = view_mat * model_mat;
 
-        let normal_mat = model_mat.invert().unwrap().transpose();
-        let normal2_mat = model2_mat.invert().unwrap().transpose();
+        let cube_normal_mat = cube_model_mat.invert().unwrap().transpose();
+        let susane_normal_mat = susane_model_mat.invert().unwrap().transpose();
         // let normal_mat = model_view_mat.invert().unwrap().transpose();
 
         let proj_mat = cgmath::perspective(cgmath::Deg(75.0), 4.0 / 3.0, 0.1, 1000.0);
 
-        let _mvp = proj_mat * view_mat * model_mat;
+        // let _mvp = proj_mat * view_mat * cube_model_mat;
 
         // Drawing code
         unsafe {
@@ -308,11 +308,11 @@ fn main() -> io::Result<()> {
         p3d.update_projection_matrix(proj_mat);
         p3d.update_view_matrix(view_mat);
 
-        p3d.update_model_matrix(cube_id, model_mat);
-        p3d.update_normal_matrix(cube_id, normal_mat);
+        p3d.update_model_matrix(cube_id, cube_model_mat);
+        p3d.update_normal_matrix(cube_id, cube_normal_mat);
 
-        p3d.update_model_matrix(cube2_id, model2_mat);
-        p3d.update_normal_matrix(cube2_id, normal2_mat);
+        p3d.update_model_matrix(susane_id, susane_model_mat);
+        p3d.update_normal_matrix(susane_id, susane_normal_mat);
 
         p3d.draw_textured_meshes();
 
