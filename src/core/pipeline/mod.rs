@@ -67,7 +67,7 @@ pub struct Render3D {
     mvp_mat_unif: uniform::Mat4Uniform,
     normal_mat_unif: uniform::Mat4Uniform,
     // view_pos_unif: uniform::Vec3Uniform,
-    time_unif: uniform::FloatUniform,
+    // time_unif: uniform::FloatUniform,
     use_normalmap_unif: uniform::BoolUniform,
     sun_intensity_unif: uniform::FloatUniform,
     sun_direction_unif: uniform::Vec3Uniform,
@@ -149,11 +149,20 @@ fn configure_texture_parameters() {
 impl Pipeline3D {
     pub fn create_and_prepare(app: &app::AppCore) -> Result<Self, InitError> {
         let main_shader = Self::load_and_compile_shader(app)?;
-        let get_unif = |name| main_shader.uniform_by_name(name).unwrap();
+        let get_unif = |name| {
+            if let Some(unif) = main_shader.uniform_by_name(name) {
+                println!("Found uniform name: {}", name);
+                return unif;
+            } else {
+                panic!("Could find uniform called {}.", name);
+            }
+        };
+
         let uMat4 = |name| uniform::Mat4Uniform::try_from(get_unif(name));
         let uVec3 = |name| uniform::Vec3Uniform::try_from(get_unif(name));
         let uBool = |name| uniform::BoolUniform::try_from(get_unif(name));
         let uFloat = |name| uniform::FloatUniform::try_from(get_unif(name));
+
         let p3d = Self {
             render: Render3D {
                 model_mat_unif: uMat4("model_mat")?,
@@ -162,8 +171,8 @@ impl Pipeline3D {
                 proj_mat_unif: uMat4("proj_mat")?,
                 mvp_mat_unif: uMat4("mvp_mat")?,
                 normal_mat_unif: uMat4("normal_mat")?,
-                // view_pos_unif: uVec3("view_pos")?,
-                time_unif: uFloat("time")?,
+                // FIXME: The time uniform cannot be requested for some reasons.
+                // time_unif: uFloat("time")?,
                 use_normalmap_unif: uBool("use_normalmap")?,
                 sun_intensity_unif: uFloat("sun.intensity")?,
                 sun_direction_unif: uVec3("sun.direction")?,
@@ -321,7 +330,7 @@ impl Pipeline3D {
     pub fn draw_textured_meshes(&self) {
         // disable normal maps
         unsafe {
-            gl::Uniform1ui(gpu::attrs::USE_NORMALMAP_FLAG, 0);
+            gl::Uniform1ui(self.render.use_normalmap_unif.def.id, 0);
             self.render.main_shader.set_active();
             gl::Uniform1i(
                 gpu::attrs::DIFFUSE_SAMPLER_LOCATION,
@@ -347,11 +356,31 @@ impl Pipeline3D {
                 let mv = self.view_matrix * m.model_matrix;
                 let mvp = self.projection_matrix * mv;
 
-                gl::UniformMatrix4fv(1, 1, gl::FALSE, m.model_matrix.as_ptr());
-                gl::UniformMatrix4fv(2, 1, gl::FALSE, mv.as_ptr());
-                gl::UniformMatrix4fv(3, 1, gl::FALSE, self.projection_matrix.as_ptr());
-                gl::UniformMatrix4fv(4, 1, gl::FALSE, mvp.as_ptr());
-                gl::UniformMatrix4fv(5, 1, gl::FALSE, m.normal_matrix.as_ptr());
+                gl::UniformMatrix4fv(
+                    self.render.model_mat_unif.def.id,
+                    1,
+                    gl::FALSE,
+                    m.model_matrix.as_ptr(),
+                );
+                gl::UniformMatrix4fv(
+                    self.render.modelview_mat_unif.def.id,
+                    1,
+                    gl::FALSE,
+                    mv.as_ptr(),
+                );
+                gl::UniformMatrix4fv(
+                    self.render.proj_mat_unif.def.id,
+                    1,
+                    gl::FALSE,
+                    self.projection_matrix.as_ptr(),
+                );
+                gl::UniformMatrix4fv(self.render.mvp_mat_unif.def.id, 1, gl::FALSE, mvp.as_ptr());
+                gl::UniformMatrix4fv(
+                    self.render.normal_mat_unif.def.id,
+                    1,
+                    gl::FALSE,
+                    m.normal_matrix.as_ptr(),
+                );
             }
 
             self.render.draw(&m.resource);
@@ -370,27 +399,32 @@ impl Pipeline3D {
                 let mvp = self.projection_matrix * mv;
 
                 gl::UniformMatrix4fv(
-                    uniforms::MODEL_MAT_LOCATION,
+                    self.render.model_mat_unif.def.id,
                     1,
                     gl::FALSE,
                     m.model_matrix.as_ptr(),
                 );
                 gl::UniformMatrix4fv(
-                    uniforms::VIEW_MAT_LOCATION,
+                    self.render.view_mat_unif.def.id,
                     1,
                     gl::FALSE,
                     self.view_matrix.as_ptr(),
                 );
-                gl::UniformMatrix4fv(uniforms::MODELVIEW_MAT_LOCATION, 1, gl::FALSE, mv.as_ptr());
                 gl::UniformMatrix4fv(
-                    uniforms::PROJECTION_MAT_LOCATION,
+                    self.render.modelview_mat_unif.def.id,
+                    1,
+                    gl::FALSE,
+                    mv.as_ptr(),
+                );
+                gl::UniformMatrix4fv(
+                    self.render.proj_mat_unif.def.id,
                     1,
                     gl::FALSE,
                     self.projection_matrix.as_ptr(),
                 );
-                gl::UniformMatrix4fv(uniforms::MVP_MAT_LOCATION, 1, gl::FALSE, mvp.as_ptr());
+                gl::UniformMatrix4fv(self.render.mvp_mat_unif.def.id, 1, gl::FALSE, mvp.as_ptr());
                 gl::UniformMatrix4fv(
-                    uniforms::NORMAL_MAT_LOCATION,
+                    self.render.normal_mat_unif.def.id,
                     1,
                     gl::FALSE,
                     m.normal_matrix.as_ptr(),

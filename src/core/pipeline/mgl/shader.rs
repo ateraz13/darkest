@@ -104,10 +104,10 @@ impl ShaderProgram {
 
         unsafe {
             gl::GetProgramiv(program_id, gl::ACTIVE_UNIFORMS, &mut uniform_count);
-            for uid in 0u32..(uniform_count as u32) {
+            for uid in 0i32..uniform_count {
                 gl::GetActiveUniform(
                     program_id,
-                    uid,
+                    uid as gl::types::GLuint,
                     MAX_UNIFORM_NAME_LEN as i32,
                     &mut name_len,
                     &mut unif_size,

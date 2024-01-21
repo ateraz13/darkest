@@ -3,13 +3,13 @@ use std::convert::TryFrom;
 
 #[derive(Debug, Clone)]
 pub struct UniformDefinition {
-    pub id: gl::types::GLuint,
+    pub id: gl::types::GLint,
     pub name: String,
     pub data_size: gl::types::GLint,
 }
 
 impl UniformDefinition {
-    pub fn new(id: gl::types::GLuint, name: String, data_size: gl::types::GLint) -> Self {
+    pub fn new(id: gl::types::GLint, name: String, data_size: gl::types::GLint) -> Self {
         Self {
             id: id,
             name: name,
@@ -27,7 +27,7 @@ macro_rules! impl_from_uniform_def {
     (($struct:ident, $enum:ident)) => {
         #[derive(Debug, Clone)]
         pub struct $struct {
-            def: UniformDefinition,
+            pub def: UniformDefinition,
         }
 
         impl From<$struct> for Uniform {
