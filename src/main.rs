@@ -19,8 +19,9 @@ use cgmath::prelude::*;
 use cgmath::prelude::{Matrix, SquareMatrix};
 use gl::types::*;
 
-type Matrix4 = cgmath::Matrix4<f32>;
-type Vector3 = cgmath::Vector3<f32>;
+type Mat4 = cgmath::Matrix4<f32>;
+type Vec3 = cgmath::Vector3<f32>;
+type Point3 = cgmath::Point3<f32>;
 
 extern "system" fn gl_error_cb(
     _source: GLenum,
@@ -190,6 +191,7 @@ fn main() -> io::Result<()> {
     let timer = std::time::Instant::now();
 
     let mut enable_blinn = false;
+    let mut view_rotate_amount = Vec3::new(0.0, 0.0, 0.0);
 
     'main_loop: loop {
         let time = timer.elapsed();
@@ -252,29 +254,23 @@ fn main() -> io::Result<()> {
             }
         }
 
-        let model_scale = Matrix4::from_scale(0.5f32);
+        let model_scale = Mat4::from_scale(0.5f32);
 
-        let model_mat = model_scale
-            * cgmath::Matrix4::<f32>::from_translation(cgmath::Vector3::new(1.1, 0.0, 0.0));
+        let model_mat = model_scale * Mat4::from_translation(Vec3::new(1.1, 0.0, 0.0));
 
-        let model2_mat = model_scale
-            * cgmath::Matrix4::<f32>::from_translation(cgmath::Vector3::new(-1.1, 0.0, 0.0));
+        let model2_mat = model_scale * Mat4::from_translation(Vec3::new(-1.1, 0.0, 0.0));
 
         let t = time.as_millis() as f32 / 1000.0;
         let camera_dist = 3.0;
-        let camera_pos = cgmath::Point3::<f32>::new(0.0, 0.0, 2.0);
+        let camera_pos = Point3::new(0.0, 0.0, 2.0);
 
-        let view_center = cgmath::Point3::new(0.0, 0.0, 0.0);
+        let view_center = Point3::new(0.0, 0.0, 0.0);
 
-        // let view_mat = Matrix4::from_translation(
+        // let view_mat = Mat4::from_translation(
         //     Vector3::new(1.0, 1.0, 5.0)
         // ).invert().unwrap();
 
-        let view_mat = cgmath::Matrix4::<f32>::look_at(
-            camera_pos,
-            view_center,
-            cgmath::Vector3::new(0.0, 1.0, 0.0),
-        );
+        let view_mat = Mat4::look_at(camera_pos, view_center, Vec3::new(0.0, 1.0, 0.0));
 
         // let model_view_mat = view_mat * model_mat;
         // let model_view2_mat = view_mat * model_mat;
