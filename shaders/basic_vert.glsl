@@ -1,8 +1,6 @@
 #version 330 core
 #extension GL_ARB_explicit_uniform_location : enable
 
-
-
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec3 normal;
 layout (location = 2) in vec2 uv;

@@ -262,7 +262,7 @@ fn main() -> io::Result<()> {
 
         let t = time.as_millis() as f32 / 1000.0;
         let camera_dist = 3.0;
-        let camera_pos = cgmath::Point3::<f32>::new(camera_dist, camera_dist, camera_dist);
+        let camera_pos = cgmath::Point3::<f32>::new(0.0, 0.0, 2.0);
 
         let view_center = cgmath::Point3::new(0.0, 0.0, 0.0);
 
