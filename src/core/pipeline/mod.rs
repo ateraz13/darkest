@@ -58,6 +58,7 @@ pub mod resource {
 
 use resource::ResourceID;
 
+#[allow(dead_code)]
 pub struct Render3D {
     main_shader: ShaderProgram,
     model_mat_unif: uniform::Mat4Uniform,
@@ -104,6 +105,7 @@ pub mod mesh_data {
     }
 }
 
+#[allow(dead_code)]
 pub struct Pipeline3D {
     render: Render3D,
     projection_matrix: Mat4,
@@ -158,31 +160,31 @@ impl Pipeline3D {
             }
         };
 
-        let uMat4 = |name| uniform::Mat4Uniform::try_from(get_unif(name));
-        let uVec3 = |name| uniform::Vec3Uniform::try_from(get_unif(name));
-        let uBool = |name| uniform::BoolUniform::try_from(get_unif(name));
-        let uFloat = |name| uniform::FloatUniform::try_from(get_unif(name));
+        let u_mat4 = |name| uniform::Mat4Uniform::try_from(get_unif(name));
+        let u_vec3 = |name| uniform::Vec3Uniform::try_from(get_unif(name));
+        let u_bool = |name| uniform::BoolUniform::try_from(get_unif(name));
+        let u_float = |name| uniform::FloatUniform::try_from(get_unif(name));
 
         let p3d = Self {
             render: Render3D {
-                model_mat_unif: uMat4("model_mat")?,
-                view_mat_unif: uMat4("view_mat")?,
-                modelview_mat_unif: uMat4("modelview_mat")?,
-                proj_mat_unif: uMat4("proj_mat")?,
-                mvp_mat_unif: uMat4("mvp_mat")?,
-                normal_mat_unif: uMat4("normal_mat")?,
+                model_mat_unif: u_mat4("model_mat")?,
+                view_mat_unif: u_mat4("view_mat")?,
+                modelview_mat_unif: u_mat4("modelview_mat")?,
+                proj_mat_unif: u_mat4("proj_mat")?,
+                mvp_mat_unif: u_mat4("mvp_mat")?,
+                normal_mat_unif: u_mat4("normal_mat")?,
                 // FIXME: The time uniform cannot be requested for some reasons.
-                // time_unif: uFloat("time")?,
-                use_normalmap_unif: uBool("use_normalmap")?,
-                sun_intensity_unif: uFloat("sun.intensity")?,
-                sun_direction_unif: uVec3("sun.direction")?,
-                sun_ambient_unif: uVec3("sun.ambient")?,
-                sun_diffuse_unif: uVec3("sun.diffuse")?,
-                sun_specular_unif: uVec3("sun.specular")?,
-                lamp_position_unif: uVec3("lamp.position")?,
-                lamp_ambient_unif: uVec3("lamp.ambient")?,
-                lamp_diffuse_unif: uVec3("lamp.diffuse")?,
-                lamp_specular_unif: uVec3("lamp.specular")?,
+                // time_unif: u_float("time")?,
+                use_normalmap_unif: u_bool("use_normalmap")?,
+                sun_intensity_unif: u_float("sun.intensity")?,
+                sun_direction_unif: u_vec3("sun.direction")?,
+                sun_ambient_unif: u_vec3("sun.ambient")?,
+                sun_diffuse_unif: u_vec3("sun.diffuse")?,
+                sun_specular_unif: u_vec3("sun.specular")?,
+                lamp_position_unif: u_vec3("lamp.position")?,
+                lamp_ambient_unif: u_vec3("lamp.ambient")?,
+                lamp_diffuse_unif: u_vec3("lamp.diffuse")?,
+                lamp_specular_unif: u_vec3("lamp.specular")?,
                 main_shader: main_shader,
             },
             projection_matrix: Mat4::identity(),
@@ -330,7 +332,7 @@ impl Pipeline3D {
     pub fn draw_textured_meshes(&self) {
         // disable normal maps
         unsafe {
-            gl::Uniform1ui(self.render.use_normalmap_unif.def.id, 0);
+            gl::Uniform1ui(self.render.use_normalmap_unif.def.id, 1);
             self.render.main_shader.set_active();
             gl::Uniform1i(
                 gpu::attrs::DIFFUSE_SAMPLER_LOCATION,

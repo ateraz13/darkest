@@ -76,7 +76,6 @@ macro_rules! impl_from_uniform_defs {
             pub fn get_def(&self) -> UniformDefinition {
                 match self {
                     $(Uniform::$enum_rest(concrete) => concrete.def.clone(),)*
-                    _ => { panic!("This is a extremelly weird bug, this should happend!"); }
                 }
             }
         }
