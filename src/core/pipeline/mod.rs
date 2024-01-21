@@ -1,12 +1,17 @@
 pub mod gpu;
+pub mod light_info;
 pub mod mgl;
 
 use crate::core::app;
+use crate::core::pipeline::mgl::attr::uniform;
 use crate::core::pipeline::mgl::shader::ShaderProgram;
 use crate::resource::BufferLoaderError;
+use std::convert::TryFrom;
 // use crate::core::macros;
+use crate::cgmath::Array;
 use cgmath::prelude::{Matrix, SquareMatrix};
 use gl::types::*;
+use light_info::DirLight;
 use std::convert::From;
 use std::path::Path;
 
@@ -28,7 +33,7 @@ pub mod resource {
 
     impl ResourceID {
         const U32_MAX: u32 = u32::MAX;
-        const U8_MAX: u8 = u8::MAX;
+        // const U8_MAX: u8 = u8::MAX;
         const TYPE_PART_MASK: u32 = (u8::MAX as u32) << 24;
         const ID_PART_MASK: u32 = ResourceID::TYPE_PART_MASK ^ ResourceID::U32_MAX;
 
@@ -55,9 +60,29 @@ use resource::ResourceID;
 
 pub struct Render3D {
     main_shader: ShaderProgram,
+    model_mat_unif: uniform::Mat4Uniform,
+    view_mat_unif: uniform::Mat4Uniform,
+    modelview_mat_unif: uniform::Mat4Uniform,
+    proj_mat_unif: uniform::Mat4Uniform,
+    mvp_mat_unif: uniform::Mat4Uniform,
+    normal_mat_unif: uniform::Mat4Uniform,
+    // view_pos_unif: uniform::Vec3Uniform,
+    time_unif: uniform::FloatUniform,
+    use_normalmap_unif: uniform::BoolUniform,
+    sun_intensity_unif: uniform::FloatUniform,
+    sun_direction_unif: uniform::Vec3Uniform,
+    sun_ambient_unif: uniform::Vec3Uniform,
+    sun_diffuse_unif: uniform::Vec3Uniform,
+    sun_specular_unif: uniform::Vec3Uniform,
+    lamp_position_unif: uniform::Vec3Uniform,
+    lamp_ambient_unif: uniform::Vec3Uniform,
+    lamp_diffuse_unif: uniform::Vec3Uniform,
+    lamp_specular_unif: uniform::Vec3Uniform,
 }
 
 type Mat4 = cgmath::Matrix4<f32>;
+// type Vec3 = cgmath::Vector3<f32>;
+type Point3 = cgmath::Point3<f32>;
 
 pub mod mesh_data {
 
@@ -85,6 +110,8 @@ pub struct Pipeline3D {
     view_matrix: Mat4,
     basic_tex_meshes: Vec<mesh_data::Basic>,
     normal_mapped_tex_meshes: Vec<mesh_data::NormalMapped>,
+    sun: DirLight,
+    view_pos: Point3,
 }
 
 #[derive(Debug)]
@@ -121,14 +148,40 @@ fn configure_texture_parameters() {
 
 impl Pipeline3D {
     pub fn create_and_prepare(app: &app::AppCore) -> Result<Self, InitError> {
+        let main_shader = Self::load_and_compile_shader(app)?;
+        let get_unif = |name| main_shader.uniform_by_name(name).unwrap();
+        let uMat4 = |name| uniform::Mat4Uniform::try_from(get_unif(name));
+        let uVec3 = |name| uniform::Vec3Uniform::try_from(get_unif(name));
+        let uBool = |name| uniform::BoolUniform::try_from(get_unif(name));
+        let uFloat = |name| uniform::FloatUniform::try_from(get_unif(name));
         let p3d = Self {
             render: Render3D {
-                main_shader: Self::load_and_compile_shader(app)?,
+                model_mat_unif: uMat4("model_mat")?,
+                view_mat_unif: uMat4("view_mat")?,
+                modelview_mat_unif: uMat4("modelview_mat")?,
+                proj_mat_unif: uMat4("proj_mat")?,
+                mvp_mat_unif: uMat4("mvp_mat")?,
+                normal_mat_unif: uMat4("normal_mat")?,
+                // view_pos_unif: uVec3("view_pos")?,
+                time_unif: uFloat("time")?,
+                use_normalmap_unif: uBool("use_normalmap")?,
+                sun_intensity_unif: uFloat("sun.intensity")?,
+                sun_direction_unif: uVec3("sun.direction")?,
+                sun_ambient_unif: uVec3("sun.ambient")?,
+                sun_diffuse_unif: uVec3("sun.diffuse")?,
+                sun_specular_unif: uVec3("sun.specular")?,
+                lamp_position_unif: uVec3("lamp.position")?,
+                lamp_ambient_unif: uVec3("lamp.ambient")?,
+                lamp_diffuse_unif: uVec3("lamp.diffuse")?,
+                lamp_specular_unif: uVec3("lamp.specular")?,
+                main_shader: main_shader,
             },
             projection_matrix: Mat4::identity(),
             view_matrix: Mat4::identity(),
             basic_tex_meshes: vec![],
             normal_mapped_tex_meshes: vec![],
+            view_pos: cgmath::Point3::<f32>::new(0.0f32, 0.0, 0.0),
+            sun: DirLight::default(),
         };
 
         p3d.configure_gl_parameters();
@@ -153,6 +206,7 @@ impl Pipeline3D {
     }
 
     //FIXME: If this is slow than try something else
+    #[allow(dead_code)]
     pub fn prepare_basic_textured_meshes(
         &mut self,
         data: &[(
@@ -260,6 +314,10 @@ impl Pipeline3D {
         self.projection_matrix = mat;
     }
 
+    pub fn update_view_pos(&mut self, pos: Point3) {
+        self.view_pos = pos.clone();
+    }
+
     pub fn draw_textured_meshes(&self) {
         // disable normal maps
         unsafe {
@@ -277,6 +335,11 @@ impl Pipeline3D {
                 gpu::attrs::NORMAL_SAMPLER_LOCATION,
                 gpu::attrs::NORMAL_TEXTURE_UNIT as i32,
             ); // Texture Unit 2 : NORMAL
+            gl::Uniform3fv(
+                gpu::attrs::uniforms::VIEW_POS_LOCATION,
+                1,
+                self.view_pos.as_ptr(),
+            );
         }
 
         for m in self.basic_tex_meshes.iter() {
@@ -295,9 +358,9 @@ impl Pipeline3D {
         }
 
         // enable normal maps
-        unsafe {
-            gl::Uniform1ui(gpu::attrs::USE_NORMALMAP_FLAG, 1);
-        }
+        // unsafe {
+        //     gl::Uniform1ui(gpu::attrs::USE_NORMALMAP_FLAG, 1);
+        // }
 
         pub use gpu::attrs::uniforms;
 

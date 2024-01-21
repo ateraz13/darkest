@@ -145,7 +145,7 @@ impl ShaderProgram {
         });
     }
 
-    pub fn uniform_by_name(&self, name: &String) -> Option<Uniform> {
+    pub fn uniform_by_name(&self, name: &str) -> Option<Uniform> {
         for unif in &self.uniform_defs {
             let def = unif.get_def();
             if def.name == *name {
