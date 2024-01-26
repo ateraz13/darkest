@@ -11,7 +11,7 @@ layout (location = 4) uniform mat4 proj_mat = mat4(1);
 layout (location = 5) uniform mat4 mvp_mat = mat4(1);
 layout (location = 6) uniform mat4 normal_mat = mat4(1);
 
-layout (location = 10) uniform vec4 view_pos;
+layout (location = 10) uniform vec3 view_pos = vec3(0.0, 0.0, 0.0);
 
 layout(location = 11) uniform float sun_intensity = 1.0;
 layout(location = 12) uniform float specular_exponent = 2.0;
@@ -24,8 +24,8 @@ layout (location = 22) uniform sampler2D normal_texture;
 // layout (location = 6) uniform vec3 sun_dir = vec3(1.0, -1.0, 0.0);
 // uniform vec3 sun_dir = vec3(0.3, 0.3, -0.3);
 
-layout (location = 30) uniform bool use_normalmap = false;
-layout (location = 31) uniform bool use_blinn = false;
+layout (location = 30) uniform bool use_normalmap = true;
+layout (location = 31) uniform bool use_blinn = true;
 
 layout (location = 50) uniform float time;
 
@@ -35,7 +35,8 @@ struct DirLight {
   vec3 ambient;
   vec3 diffuse;
   vec3 specular;
-};
+}
+;
 
 struct PointLight {
   vec3 position;
@@ -53,9 +54,9 @@ uniform DirLight sun = DirLight (
 );
 
 uniform PointLight lamp = PointLight (
-   vec3 (0.0, 10.0, 10.0),
+   vec3 (10.0, 10.0, 10.0),
    vec3(0.0, 0.0, 0.0),   // Ambient
-   vec3(1.0, 0.0, 1.0),   // Diffuse
+   vec3(1.0, 1.0, 1.0),   // Diffuse
    vec3(0.5, 0.0, 0.5)     // Specular
 );
 
@@ -81,8 +82,8 @@ vec3 calc_dir_light( DirLight light, vec3 normal, vec2 uv, vec3 frag_pos, vec3 v
 
   }
 
-  vec3 diffuse_color = vec3(0.5,0.0,0.0);
-  // vec3 diffuse_color = texture(diffuse_texture, uv).rgb;
+  // vec3 diffuse_color = vec3(0.5,0.0,0.0);
+  vec3 diffuse_color = texture(diffuse_texture, uv).rgb;
 
   diffuse = diffuse_scalar *  diffuse_color * light.intensity ;
 
@@ -91,8 +92,8 @@ vec3 calc_dir_light( DirLight light, vec3 normal, vec2 uv, vec3 frag_pos, vec3 v
 
 
   // ambient = light.ambient * 0.1;
-  ambient = vec3(0.0,0.0,0.0);
-  // ambient = light.ambient * texture(diffuse_texture, uv).rgb;
+  // ambient = vec3(0.0,0.0,0.0);
+  ambient = light.ambient * texture(diffuse_texture, uv).rgb;
 
   return diffuse + specular + ambient;
 }
@@ -100,8 +101,8 @@ vec3 calc_dir_light( DirLight light, vec3 normal, vec2 uv, vec3 frag_pos, vec3 v
 vec3 calc_point_light(PointLight light, vec3 normal, vec2 uv, vec3 frag_pos, vec3 view_pos )
 {
   vec3 diffuse, specular, ambient;
-  vec3 view_dir = normalize(view_pos - frag_pos);
   vec3 light_dir =  normalize((light.position - frag_pos));
+  vec3 view_dir = normalize(view_pos - frag_pos);
   float diffuse_scalar = clamp(dot(normal, light_dir), 0.0, 1.0);
   float specular_scalar;
 
@@ -115,7 +116,7 @@ vec3 calc_point_light(PointLight light, vec3 normal, vec2 uv, vec3 frag_pos, vec
 
   diffuse = diffuse_scalar * light.diffuse * texture(diffuse_texture, uv).rgb;
   specular = specular_scalar * clamp( specular_scalar * light.specular, 0, 1) * texture(specular_texture, uv).rgb ;
-  // ambient = light.ambient * texture(diffuse_texture, uv).rgb;
+  ambient = light.ambient * texture(diffuse_texture, uv).rgb;
 
   return diffuse + specular + ambient;
 }
@@ -154,13 +155,12 @@ void main ()
     }
 
     color = calc_dir_light(dir_light, frag_normal, frag_uv, fp, vp);
-    // color = calc_point_light(
-    //     lamp_light,
-    //     frag_normal,
-    //     frag_uv,
-    //     fp, vp
-    // );
-  // }
+    color = calc_point_light(
+        lamp_light,
+        frag_normal,
+        frag_uv,
+        fp, vp
+    );
 
   frag_color = vec4(color, 1.0);
 }
