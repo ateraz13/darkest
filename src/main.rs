@@ -19,6 +19,7 @@ use cgmath::prelude::*;
 use cgmath::prelude::{Matrix, SquareMatrix};
 use gl::types::*;
 
+type Mat3 = cgmath::Matrix3<f32>;
 type Mat4 = cgmath::Matrix4<f32>;
 type Vec3 = cgmath::Vector3<f32>;
 type Vec2 = cgmath::Vector2<f32>;
@@ -74,6 +75,12 @@ extern "system" fn gl_error_cb(
 //
 // * Primary target in mind: Nalgebra *
 //
+
+macro_rules! print_val {
+    ($arg:ident) => {
+        println!("{}: {:?}", stringify!($arg), $arg)
+    };
+}
 
 fn process_args() -> app::Arguments {
     let mut cmd_args = std::env::args();
@@ -193,9 +200,12 @@ fn main() -> io::Result<()> {
     let mut view_drag_enabled = false;
 
     let mut view_rotation = Vec3::new(0.0, 0.0, 0.0);
+    let mut cube_rot = Vec3::zero();
+
+    let proj_mat = cgmath::perspective(cgmath::Deg(75.0), 4.0 / 3.0, 0.1, 1000.0);
 
     'main_loop: loop {
-        let time = timer.elapsed();
+        let delta_time = timer.elapsed();
 
         let mut view_drag_amount = Vec2::new(0.0, 0.0);
 
@@ -267,34 +277,35 @@ fn main() -> io::Result<()> {
 
         let model_scale = Mat4::from_scale(0.5f32);
 
-        let cube_model_mat = model_scale * Mat4::from_translation(Vec3::new(1.1, 0.0, 0.0));
+        let _t = delta_time.as_millis() as f32 / 1000.0;
+
+        cube_rot += 0.1 * Vec3::new(0.0, (std::f32::consts::PI) / 180.0, 0.0);
+        let cube_quot = cgmath::Quaternion::from_sv(1.0, cube_rot);
+        let cube_model_mat =
+            Mat4::from(cube_quot) * model_scale * Mat4::from_translation(Vec3::new(1.1, 0.0, 0.0));
 
         let susane_model_mat = model_scale * Mat4::from_translation(Vec3::new(-1.1, 0.0, 0.0));
 
         view_rotation += Vec3::new(0.0, view_drag_amount.x, view_drag_amount.y);
 
-        let _t = time.as_millis() as f32 / 1000.0;
         let _camera_dist = 3.0;
 
-        let camera_pos = Point3::new(0.0, 0.0, 1.0);
-        let camera_pos = cgmath::Quaternion::from_sv(1.0, view_rotation).rotate_point(camera_pos);
+        let camera_pos = Point3::new(0.0, 0.0, 2.0);
+        let camera_pos = Mat3::from_scale(10.0).transform_point(camera_pos);
 
         let view_center = Point3::new(0.0, 0.0, 0.0);
-
         // let view_mat = Mat4::from_translation(
         //     Vector3::new(1.0, 1.0, 5.0)
         // ).invert().unwrap();
-
         let view_mat = Mat4::look_at_rh(camera_pos, view_center, Vec3::new(0.0, 1.0, 0.0));
 
         // let model_view_mat = view_mat * model_mat;
         // let model_view2_mat = view_mat * model_mat;
 
-        let cube_normal_mat = cube_model_mat.invert().unwrap().transpose();
-        let susane_normal_mat = susane_model_mat.invert().unwrap().transpose();
+        // FIXME: Inverse shoud be probably done before transpose on normal
+        let cube_normal_mat = cube_model_mat.transpose().invert().unwrap();
+        let susane_normal_mat = susane_model_mat.transpose().invert().unwrap();
         // let normal_mat = model_view_mat.invert().unwrap().transpose();
-
-        let proj_mat = cgmath::perspective(cgmath::Deg(75.0), 4.0 / 3.0, 0.1, 1000.0);
 
         // let _mvp = proj_mat * view_mat * cube_model_mat;
 
@@ -303,6 +314,9 @@ fn main() -> io::Result<()> {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             // gl::Uniform3fv(10, 1, camera_pos.as_ptr());
         }
+
+        // print_val!(camera_pos);
+        // print_val!(susane_model_mat);
 
         p3d.update_view_pos(camera_pos);
         p3d.update_projection_matrix(proj_mat);
@@ -319,7 +333,7 @@ fn main() -> io::Result<()> {
         app.sdl_window.gl_swap_window();
         // Limit the framerate to 60 FPS
         let time_end = timer.elapsed();
-        let frame_duration = time_end - time;
+        let frame_duration = time_end - delta_time;
 
         let max_frame_duration = std::time::Duration::from_millis(1000 / 60);
 
