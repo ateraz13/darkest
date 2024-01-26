@@ -67,7 +67,7 @@ pub struct Render3D {
     proj_mat_unif: uniform::Mat4Uniform,
     mvp_mat_unif: uniform::Mat4Uniform,
     normal_mat_unif: uniform::Mat4Uniform,
-    // view_pos_unif: uniform::Vec3Uniform,
+    view_pos_unif: uniform::Vec3Uniform,
     // time_unif: uniform::FloatUniform,
     use_normalmap_unif: uniform::BoolUniform,
     sun_intensity_unif: uniform::FloatUniform,
@@ -82,7 +82,8 @@ pub struct Render3D {
 }
 
 type Mat4 = cgmath::Matrix4<f32>;
-// type Vec3 = cgmath::Vector3<f32>;
+type Vec3 = cgmath::Vector3<f32>;
+type Vec4 = cgmath::Vector4<f32>;
 type Point3 = cgmath::Point3<f32>;
 
 pub mod mesh_data {
@@ -185,6 +186,7 @@ impl Pipeline3D {
                 lamp_ambient_unif: u_vec3("lamp.ambient")?,
                 lamp_diffuse_unif: u_vec3("lamp.diffuse")?,
                 lamp_specular_unif: u_vec3("lamp.specular")?,
+                view_pos_unif: u_vec3("view_pos")?,
                 main_shader: main_shader,
             },
             projection_matrix: Mat4::identity(),
@@ -329,10 +331,21 @@ impl Pipeline3D {
         self.view_pos = pos.clone();
     }
 
+    pub fn upload_common_uniforms(&self) {
+        unsafe {
+            gl::Uniform3fv(
+                // gpu::attrs::uniforms::VIEW_POS_LOCATION,
+                self.render.view_pos_unif.def.id,
+                1,
+                self.view_pos.as_ptr(),
+            );
+        }
+    }
+
     pub fn draw_textured_meshes(&self) {
         // disable normal maps
         unsafe {
-            gl::Uniform1ui(self.render.use_normalmap_unif.def.id, 1);
+            gl::Uniform1ui(self.render.use_normalmap_unif.def.id, 0);
             self.render.main_shader.set_active();
             gl::Uniform1i(
                 gpu::attrs::DIFFUSE_SAMPLER_LOCATION,
@@ -346,12 +359,9 @@ impl Pipeline3D {
                 gpu::attrs::NORMAL_SAMPLER_LOCATION,
                 gpu::attrs::NORMAL_TEXTURE_UNIT as i32,
             ); // Texture Unit 2 : NORMAL
-            gl::Uniform3fv(
-                gpu::attrs::uniforms::VIEW_POS_LOCATION,
-                1,
-                self.view_pos.as_ptr(),
-            );
         }
+
+        self.upload_common_uniforms();
 
         for m in self.basic_tex_meshes.iter() {
             unsafe {
@@ -395,10 +405,12 @@ impl Pipeline3D {
 
         pub use gpu::attrs::uniforms;
 
+        self.upload_common_uniforms();
+
         for m in self.normal_mapped_tex_meshes.iter() {
             unsafe {
                 let mv = self.view_matrix * m.model_matrix;
-                let mvp = self.projection_matrix * mv;
+                let mvp = self.projection_matrix * self.view_matrix * m.model_matrix;
 
                 gl::UniformMatrix4fv(
                     self.render.model_mat_unif.def.id,
